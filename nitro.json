@@ -1,0 +1,25 @@
+{
+  "$schema": "https://nitro.margelo.com/schemas/nitro.schema.json",
+  "cxxNamespace": ["nitro", "thermalprinter"],
+  "ios": {
+    "iosModuleName": "NitroThermalPrinter"
+  },
+  "android": {
+    "androidNamespace": ["com", "nitro", "thermalprinter"],
+    "androidCxxLibName": "NitroThermalPrinter"
+  },
+  "autolinking": {
+    "HybridBLEPrinter": {
+      "swift": "HybridBLEPrinter",
+      "kotlin": "HybridBLEPrinter"
+    },
+    "HybridNetPrinter": {
+      "swift": "HybridNetPrinter",
+      "kotlin": "HybridNetPrinter"
+    },
+    "HybridUSBPrinter": {
+      "swift": "HybridUSBPrinter",
+      "kotlin": "HybridUSBPrinter"
+    }
+  }
+}

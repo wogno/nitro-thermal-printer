@@ -1,189 +1,375 @@
-# react-native-thermal-receipt-printer-image-qr
+# Nitro Thermal Printer
 
-![npm](https://img.shields.io/npm/dw/react-native-thermal-receipt-printer-image-qr?logo=github)
-![npm](https://img.shields.io/npm/v/react-native-thermal-receipt-printer-image-qr?color=green&logo=npm&logoColor=green)
+High-performance React Native thermal receipt printer library using **Nitro Modules** (JSI).
 
-- I forked this for my quickly project, this is not the official project.
-- Fork of [`react-native-thermal-receipt-printer`](https://www.npmjs.com/package/react-native-thermal-receipt-printer) and add implement :
-  <br />
+Supports USB, Bluetooth (BLE), and Network printers with near-native performance.
 
-| Implement                 | Android            | IOS                |
-| ------------------------- | ------------------ | ------------------ |
-| Image & QR (URL & Base64) | :heavy_check_mark: | :heavy_check_mark: |
-| Fix cut                   | :heavy_check_mark: | :heavy_check_mark: |
-| Print With Column         | :heavy_check_mark: | :heavy_check_mark: |
-| NET Connect Timeout       | :heavy_check_mark: | :heavy_check_mark: |
+## Features
 
-:grey_exclamation:**`Print Image & QR with bluetooth in IOS just implement not tested yet`**
+| Feature | Android | iOS |
+|---------|---------|-----|
+| USB Printer | ✅ | ❌ |
+| BLE Printer | ✅ | ✅ |
+| Network Printer | ✅ | ✅ |
+| Print Text | ✅ | ✅ |
+| Print Image (URL) | ✅ | ✅ |
+| Print Image (Base64) | ✅ | ✅ |
+| Print Columns | ✅ | ✅ |
+| Auto-Reconnection | ✅ | ✅ |
+| Connection State | ✅ | ✅ |
+| Print Queue | ✅ | ✅ |
+| Image Caching | ✅ | ✅ |
+| Network Scan | ✅ | ✅ |
 
-## Support
+## What's New in v3.0
 
-| Printer    | Android            | IOS                |
-| ---------- | ------------------ | ------------------ |
-| USBPrinter | :heavy_check_mark: |                    |
-| BLEPrinter | :heavy_check_mark: | :heavy_check_mark: |
-| NetPrinter | :heavy_check_mark: | :heavy_check_mark: |
+- **Nitro Modules (JSI)** - Near-native performance (~0.1ms vs ~10ms bridge overhead)
+- **Kotlin** - Complete Android rewrite in Kotlin with Coroutines
+- **Swift** - Complete iOS rewrite in Swift with async/await
+- **Auto-reconnection** - Automatic Bluetooth reconnection on disconnect
+- **Print Queue** - Prevents race conditions, ensures print order
+- **Connection State** - Real-time connection monitoring
+- **Image Caching** - LRU cache for faster image printing
+- **Async/Await** - All methods return Promises
 
-<br />
-<div style="display: flex; flex-direction: row; align-self: center; align-items: center">
-<img src="image/invoice.jpg" alt="bill" width="270" height="580"/>
-<img src="image/_screenshot.jpg" alt="screenshot" width="270" height="580"/>
-</div>
+## Requirements
+
+- React Native >= 0.76.0
+- New Architecture enabled
+- iOS 13.0+
+- Android API 24+
 
 ## Installation
 
-```
-npm i react-native-thermal-receipt-printer-image-qr
-npm i react-native-ping
+```bash
+# npm
+npm install react-native-thermal-receipt-printer-image-qr react-native-nitro-modules
+
+# yarn
+yarn add react-native-thermal-receipt-printer-image-qr react-native-nitro-modules
 ```
 
-or
+### iOS Setup
 
-```
-yarn add react-native-thermal-receipt-printer-image-qr
-yarn add react-native-ping
-```
-
-next step
-
-```
-# RN >= 0.60
+```bash
 cd ios && pod install
+```
 
-# RN < 0.60
-react-native link react-native-thermal-receipt-printer-image-qr
+### Android Setup
+
+No additional setup required.
+
+## Quick Start
+
+### BLE Printer
+
+```typescript
+import { BLEPrinter } from 'react-native-thermal-receipt-printer-image-qr';
+
+async function printWithBLE() {
+  // Initialize
+  await BLEPrinter.init();
+
+  // Get paired devices
+  const devices = await BLEPrinter.getDeviceList();
+  console.log('Devices:', devices);
+
+  // Connect to printer
+  await BLEPrinter.connectPrinter(devices[0].inner_mac_address);
+
+  // Check connection
+  const connectedDevice = BLEPrinter.isConnected();
+  console.log('Connected to:', connectedDevice);
+
+  // Print
+  await BLEPrinter.printBill('Hello World!\n');
+
+  // Disconnect
+  await BLEPrinter.closeConn();
+}
+```
+
+### Network Printer
+
+```typescript
+import { NetPrinter } from 'react-native-thermal-receipt-printer-image-qr';
+
+async function printWithNetwork() {
+  await NetPrinter.init();
+
+  // Scan network for printers
+  const devices = await NetPrinter.scanNetwork();
+  console.log('Found printers:', devices);
+
+  // Or connect directly
+  await NetPrinter.connectPrinter('192.168.1.100', 9100);
+
+  // Print
+  await NetPrinter.printBill('Invoice #12345\n');
+
+  await NetPrinter.closeConn();
+}
+```
+
+### USB Printer (Android only)
+
+```typescript
+import { USBPrinter } from 'react-native-thermal-receipt-printer-image-qr';
+
+async function printWithUSB() {
+  await USBPrinter.init();
+
+  const devices = await USBPrinter.getDeviceList();
+
+  await USBPrinter.connectPrinter(devices[0].vendor_id, devices[0].product_id);
+
+  await USBPrinter.printBill('Receipt\n');
+
+  await USBPrinter.closeConn();
+}
 ```
 
 ## API Reference
 
-```tsx
-    init: () => Promise;
-    getDeviceList: () => Promise;
-    /**
-     * `timeout`
-     * @default 4000ms
-     */
-    connectPrinter: (host: string, port: number, timeout?: number | undefined) => Promise;
-    closeConn: () => Promise;
-    /**
-     * Print text
-     */
-    printText: (text: string, opts?: {}) => void;
-    /**
-     * Print text & end the bill & cut
-     */
-    printBill: (text: string, opts?: PrinterOptions) => void;
-    /**
-     * print with image url
-     */
-    printImage: (imgUrl: string, opts?: PrinterImageOptions) => void;
-    /**
-     * Base 64 string
-     */
-    printImageBase64: (Base64: string, opts?: PrinterImageOptions) => void;
-    /**
-     * Only android print with encoder
-     */
-    printRaw: (text: string) => void;
-    /**
-     * print column
-     * 80mm => 46 character
-     * 58mm => 30 character
-     */
-    printColumnsText: (texts: string[], columnWidth: number[], columnAlignment: ColumnAlignment[], columnStyle?: string[], opts?: PrinterOptions) => void;
+### Common Methods (All Printers)
+
+```typescript
+// Lifecycle
+init(): Promise<void>
+closeConn(): Promise<void>
+
+// Discovery
+getDeviceList(): Promise<Device[]>
+
+// Connection State
+isConnected(): string | undefined
+getConnectionState(): ConnectionState
+onConnectionStateChange(callback: (state: string) => void): () => void
+
+// Print Status
+isPrinting(): boolean
+getPrintQueue(): PrintJobStatus[]
+
+// Print Methods
+printText(text: string, options?: PrinterOptions): Promise<PrintJobStatus>
+printBill(text: string, options?: PrinterOptions): Promise<PrintJobStatus>
+printRaw(data: string): Promise<PrintJobStatus>
+printImage(imageUrl: string, options?: PrinterImageOptions): Promise<PrintJobStatus>
+printImageBase64(base64: string, options?: PrinterImageOptions): Promise<PrintJobStatus>
+printColumnsText(texts: string[], columnWidth: number[], columnAlignment: number[], columnStyle?: string[], options?: PrinterOptions): Promise<PrintJobStatus>
+
+// Image Caching
+cacheImage(url: string, key: string): Promise<void>
+printCachedImage(key: string, options?: PrinterImageOptions): Promise<PrintJobStatus>
+clearImageCache(): void
+
+// Permissions
+askPermissions(): Promise<PermissionResult>
 ```
 
-## Styling
+### BLE Specific Methods
 
-```js
-import {
-  COMMANDS,
-  ColumnAlignment,
-} from "react-native-thermal-receipt-printer-image-qr";
+```typescript
+// Auto-reconnection
+enableAutoReconnect(enabled: boolean): void
+setReconnectAttempts(maxAttempts: number): void
+setReconnectDelay(delayMs: number): void
 ```
 
-[See more here](https://github.com/thiendangit/react-native-thermal-receipt-printer-image-qr/blob/main/dist/utils/printer-commands.js)
+### Network Specific Methods
 
-## Example
+```typescript
+// Network scan
+scanNetwork(timeout?: number): Promise<NetDevice[]>
+onScanProgress(callback: (progress: number) => void): () => void
+```
 
-**`Print Columns Text`**
+### USB Specific Methods (Android)
 
-```tsx
+```typescript
+// Device events
+onDeviceAttached(callback: (device: USBDevice) => void): () => void
+onDeviceDetached(callback: () => void): () => void
+```
+
+## Print Options
+
+```typescript
+interface PrinterOptions {
+  beep?: boolean;      // Beep after print
+  cut?: boolean;       // Cut paper after print
+  tailingLine?: boolean; // Add trailing lines
+  encoding?: string;   // Text encoding (default: UTF-8)
+}
+
+interface PrinterImageOptions extends PrinterOptions {
+  imageWidth?: number;
+  imageHeight?: number;
+  printerWidthType?: 58 | 80; // Printer width in mm
+  paddingX?: number;
+}
+```
+
+## Styling with ESC/POS Commands
+
+```typescript
+import { COMMANDS } from 'react-native-thermal-receipt-printer-image-qr';
+
+const { TEXT_FORMAT } = COMMANDS;
+
+const text = `
+${TEXT_FORMAT.TXT_BOLD_ON}Bold Text${TEXT_FORMAT.TXT_BOLD_OFF}
+${TEXT_FORMAT.TXT_UNDERL_ON}Underlined${TEXT_FORMAT.TXT_UNDERL_OFF}
+${TEXT_FORMAT.TXT_ALIGN_CT}Centered${TEXT_FORMAT.TXT_ALIGN_LT}
+`;
+
+await BLEPrinter.printText(text);
+```
+
+## Print Columns Example
+
+```typescript
+import { COMMANDS, ColumnAlignment } from 'react-native-thermal-receipt-printer-image-qr';
+
 const BOLD_ON = COMMANDS.TEXT_FORMAT.TXT_BOLD_ON;
 const BOLD_OFF = COMMANDS.TEXT_FORMAT.TXT_BOLD_OFF;
-let orderList = [
-  ["1. Skirt Palas Labuh Muslimah Fashion", "x2", "500$"],
-  ["2. BLOUSE ROPOL VIRAL MUSLIMAH FASHION", "x4222", "500$"],
-  [
-    "3. Women Crew Neck Button Down Ruffle Collar Loose Blouse",
-    "x1",
-    "30000000000000$",
-  ],
-  ["4. Retro Buttons Up Full Sleeve Loose", "x10", "200$"],
-  ["5. Retro Buttons Up", "x10", "200$"],
-];
-let columnAlignment = [
+
+// 80mm printer = 46 chars, 58mm printer = 30 chars
+const columnWidth = [27, 7, 12]; // Total: 46
+const columnAlignment = [
   ColumnAlignment.LEFT,
   ColumnAlignment.CENTER,
   ColumnAlignment.RIGHT,
 ];
-let columnWidth = [46 - (7 + 12), 7, 12];
-const header = ["Product list", "Qty", "Price"];
-Printer.printColumnsText(header, columnWidth, columnAlignment, [
-  `${BOLD_ON}`,
-  "",
-  "",
-]);
-for (let i in orderList) {
-  Printer.printColumnsText(orderList[i], columnWidth, columnAlignment, [
-    `${BOLD_OFF}`,
-    "",
-    "",
-  ]);
-}
-Printer.printBill(`${CENTER}Thank you\n`);
-```
 
-**`Print image`**
-
-```tsx
-Printer.printImage(
-  "https://media-cdn.tripadvisor.com/media/photo-m/1280/1b/3a/bd/b5/the-food-bill.jpg",
-  {
-    imageWidth: 575,
-    // imageHeight: 1000,
-    // paddingX: 100
-  }
+// Print header
+await BLEPrinter.printColumnsText(
+  ['Product', 'Qty', 'Price'],
+  columnWidth,
+  columnAlignment,
+  [BOLD_ON, '', '']
 );
+
+// Print items
+const items = [
+  ['Coffee Latte', 'x2', '$8.00'],
+  ['Croissant', 'x1', '$4.50'],
+  ['Orange Juice', 'x3', '$12.00'],
+];
+
+for (const item of items) {
+  await BLEPrinter.printColumnsText(
+    item,
+    columnWidth,
+    columnAlignment,
+    [BOLD_OFF, '', '']
+  );
+}
+
+// Print total
+await BLEPrinter.printBill('\n--------------\nTotal: $24.50\n');
 ```
 
-[See more here](https://github.com/thiendangit/react-native-thermal-receipt-printer-image-qr/blob/main/example/src/HomeScreen.tsx)
+## Connection State Monitoring
 
-## Troubleshoot
+```typescript
+// Listen to connection changes
+const unsubscribe = BLEPrinter.onConnectionStateChange((state) => {
+  console.log('Connection state:', state);
+  // 'disconnected' | 'connecting' | 'connected' | 'reconnecting'
+});
 
-- When installing `react-native` version >= 0.60, XCode shows this error:
+// Enable auto-reconnection
+BLEPrinter.enableAutoReconnect(true);
+BLEPrinter.setReconnectAttempts(3);
+BLEPrinter.setReconnectDelay(2000);
 
-```
-duplicate symbols for architecture x86_64
-```
-
-That's because the .a library uses [CocoaAsyncSocket](https://github.com/robbiehanson/CocoaAsyncSocket) library and Flipper uses it too.
-
-_Podfile_
-
-```diff
-...
-  use_native_modules!
-
-  # Enables Flipper.
-  #
-  # Note that if you have use_frameworks! enabled, Flipper will not work and
-  # you should disable these next few lines.
-  # add_flipper_pods!
-  # post_install do |installer|
-  #   flipper_post_install(installer)
-  # end
-...
+// Cleanup
+unsubscribe();
 ```
 
-and comment out code related to Flipper in `ios/AppDelegate.m`
+## Image Caching
+
+```typescript
+// Cache images for faster printing
+await BLEPrinter.cacheImage('https://example.com/logo.png', 'logo');
+
+// Print cached image (much faster)
+await BLEPrinter.printCachedImage('logo', { imageWidth: 200 });
+
+// Clear cache when done
+BLEPrinter.clearImageCache();
+```
+
+## Permissions
+
+### Android
+
+Add to `AndroidManifest.xml`:
+
+```xml
+<!-- Bluetooth -->
+<uses-permission android:name="android.permission.BLUETOOTH" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+
+<!-- Location (required for BLE scanning on Android < 12) -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+<!-- USB -->
+<uses-feature android:name="android.hardware.usb.host" />
+```
+
+### iOS
+
+Add to `Info.plist`:
+
+```xml
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>We need Bluetooth to connect to thermal printers</string>
+<key>NSBluetoothPeripheralUsageDescription</key>
+<string>We need Bluetooth to connect to thermal printers</string>
+<key>NSLocalNetworkUsageDescription</key>
+<string>We need local network access to find network printers</string>
+```
+
+## Troubleshooting
+
+### App freezes after print
+
+This was fixed in v3.0 by implementing a proper print queue. All print operations are now async and non-blocking.
+
+### Bluetooth connection fails on Android 12+
+
+Make sure you have `BLUETOOTH_CONNECT` and `BLUETOOTH_SCAN` permissions:
+
+```typescript
+const result = await BLEPrinter.askPermissions();
+if (!result.granted) {
+  // Open settings
+  console.log('Please grant Bluetooth permissions');
+}
+```
+
+### Network printer not found
+
+1. Ensure printer is on the same network
+2. Check if port 9100 is open
+3. Try direct connection: `NetPrinter.connectPrinter('IP', 9100)`
+
+## Migration from v2.x
+
+```typescript
+// v2.x (callbacks, sync)
+BLEPrinter.printText('Hello'); // fire-and-forget
+
+// v3.x (promises, async)
+await BLEPrinter.printText('Hello'); // wait for completion
+const status = await BLEPrinter.printBill('Hello'); // get status
+console.log(status); // { id, status: 'completed' }
+```
+
+## License
+
+MIT

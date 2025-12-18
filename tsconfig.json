@@ -1,24 +1,29 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
-    "module": "esnext",
-    "target": "es5",
-    "lib": ["es6", "es2016", "es2017"],
-    "allowJs": false,
-    "jsx": "react-native",
-    "types": ["react", "node"],
-    "declaration": true,
-    "moduleResolution": "node",
+    "rootDir": ".",
+    "paths": {
+      "react-native-thermal-receipt-printer-image-qr": ["./src/index"]
+    },
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "jsx": "react-native",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "suppressImplicitAnyIndexErrors": true,
+    "noImplicitOverride": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "typeRoots": ["./src/@types/", "./node_modules/@types/"]
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ESNext",
+    "verbatimModuleSyntax": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "lib", "example"]
 }

@@ -1,14 +1,24 @@
-import { NativeModules, NativeEventEmitter, Platform } from "react-native";
+/**
+ * React Native Thermal Receipt Printer v3
+ *
+ * High-performance thermal printer library using Nitro Modules.
+ * Supports USB, BLE, and Network printers.
+ */
 
-import * as EPToolkit from "./utils/EPToolkit";
-import { processColumnText } from "./utils/print-column";
-import { COMMANDS } from "./utils/printer-commands";
-import { connectToHost } from "./utils/net-connect";
+import { NitroModules } from 'react-native-nitro-modules';
+import type { HybridBLEPrinter } from './specs/BLEPrinter.nitro';
+import type { HybridNetPrinter } from './specs/NetPrinter.nitro';
+import type { HybridUSBPrinter } from './specs/USBPrinter.nitro';
 
-const RNUSBPrinter = NativeModules.RNUSBPrinter;
-const RNBLEPrinter = NativeModules.RNBLEPrinter;
-const RNNetPrinter = NativeModules.RNNetPrinter;
+// Re-export types
+export * from './specs/types';
+export type { HybridBLEPrinter, HybridNetPrinter, HybridUSBPrinter };
 
+// Export utilities
+export { COMMANDS } from './utils/printer-commands';
+export { processColumnText } from './utils/print-column';
+
+// Legacy type exports for backward compatibility
 export interface PrinterOptions {
   beep?: boolean;
   cut?: boolean;
@@ -16,10 +26,7 @@ export interface PrinterOptions {
   encoding?: string;
 }
 
-export enum PrinterWidth {
-  "58mm" = 58,
-  "80mm" = 80,
-}
+// PrinterWidth is exported from ./specs/types
 
 export interface PrinterImageOptions {
   beep?: boolean;
@@ -29,7 +36,6 @@ export interface PrinterImageOptions {
   imageWidth?: number;
   imageHeight?: number;
   printerWidthType?: PrinterWidth;
-  // only ios
   paddingX?: number;
 }
 
@@ -49,513 +55,496 @@ export interface INetPrinter {
   port: number;
 }
 
-export enum ColumnAlignment {
-  LEFT,
-  CENTER,
-  RIGHT,
+export { ColumnAlignment } from './specs/types';
+
+// ============ Hybrid Object Instances ============
+
+let _blePrinter: HybridBLEPrinter | null = null;
+let _netPrinter: HybridNetPrinter | null = null;
+let _usbPrinter: HybridUSBPrinter | null = null;
+
+function getBLEPrinter(): HybridBLEPrinter {
+  if (!_blePrinter) {
+    _blePrinter = NitroModules.createHybridObject<HybridBLEPrinter>('HybridBLEPrinter');
+  }
+  return _blePrinter;
 }
 
-const textTo64Buffer = (text: string, opts: PrinterOptions) => {
-  const defaultOptions = {
-    beep: false,
-    cut: false,
-    tailingLine: false,
-    encoding: "UTF8",
-  };
+function getNetPrinter(): HybridNetPrinter {
+  if (!_netPrinter) {
+    _netPrinter = NitroModules.createHybridObject<HybridNetPrinter>('HybridNetPrinter');
+  }
+  return _netPrinter;
+}
 
-  const options = {
-    ...defaultOptions,
-    ...opts,
-  };
+function getUSBPrinter(): HybridUSBPrinter {
+  if (!_usbPrinter) {
+    _usbPrinter = NitroModules.createHybridObject<HybridUSBPrinter>('HybridUSBPrinter');
+  }
+  return _usbPrinter;
+}
 
-  const fixAndroid = "\n";
-  const buffer = EPToolkit.exchange_text(text + fixAndroid, options);
-  return buffer.toString("base64");
-};
+// ============ BLE Printer API ============
 
-const billTo64Buffer = (text: string, opts: PrinterOptions) => {
-  const defaultOptions = {
-    beep: true,
-    cut: true,
-    encoding: "UTF8",
-    tailingLine: true,
-  };
-  const options = {
-    ...defaultOptions,
-    ...opts,
-  };
-  const buffer = EPToolkit.exchange_text(text, options);
-  return buffer.toString("base64");
-};
-
-const textPreprocessingIOS = (text: string, canCut = true, beep = true) => {
-  let options = {
-    beep: beep,
-    cut: canCut,
-  };
-  return {
-    text: text
-      .replace(/<\/?CB>/g, "")
-      .replace(/<\/?CM>/g, "")
-      .replace(/<\/?CD>/g, "")
-      .replace(/<\/?C>/g, "")
-      .replace(/<\/?D>/g, "")
-      .replace(/<\/?B>/g, "")
-      .replace(/<\/?M>/g, ""),
-    opts: options,
-  };
-};
-
-// const imageToBuffer = async (imagePath: string, threshold: number = 60) => {
-//   const buffer = await EPToolkit.exchange_image(imagePath, threshold);
-//   return buffer.toString("base64");
-// };
-
-const USBPrinter = {
-  init: (): Promise<void> =>
-    new Promise((resolve, reject) =>
-      RNUSBPrinter.init(
-        () => resolve(),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  getDeviceList: (): Promise<IUSBPrinter[]> =>
-    new Promise((resolve, reject) =>
-      RNUSBPrinter.getDeviceList(
-        (printers: IUSBPrinter[]) => resolve(printers),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  connectPrinter: (vendorId: string, productId: string): Promise<IUSBPrinter> =>
-    new Promise((resolve, reject) =>
-      RNUSBPrinter.connectPrinter(
-        vendorId,
-        productId,
-        (printer: IUSBPrinter) => resolve(printer),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  closeConn: (): Promise<void> =>
-    new Promise((resolve) => {
-      RNUSBPrinter.closeConn();
-      resolve();
-    }),
-
-  printText: (text: string, opts: PrinterOptions = {}): void =>
-    RNUSBPrinter.printRawData(textTo64Buffer(text, opts), (error: Error) =>
-      console.warn(error)
-    ),
-
-  printBill: (text: string, opts: PrinterOptions = {}): void =>
-    RNUSBPrinter.printRawData(billTo64Buffer(text, opts), (error: Error) =>
-      console.warn(error)
-    ),
+/**
+ * BLE Printer - Backward compatible API with new features
+ */
+export const BLEPrinter = {
   /**
-   * image url
-   * @param imgUrl
-   * @param opts
+   * Get the underlying Hybrid Object for advanced usage
    */
-  printImage: function (imgUrl: string, opts: PrinterImageOptions = {}) {
-    if (Platform.OS === "ios") {
-      RNUSBPrinter.printImageData(imgUrl, opts, (error: Error) =>
-        console.warn(error)
-      );
-    } else {
-      RNUSBPrinter.printImageData(
-        imgUrl,
-        opts?.imageWidth ?? 0,
-        opts?.imageHeight ?? 0,
-        (error: Error) => console.warn(error)
-      );
-    }
+  getInstance: getBLEPrinter,
+
+  /**
+   * Initialize the BLE printer module
+   */
+  async init(): Promise<void> {
+    return getBLEPrinter().init();
   },
+
   /**
-   * base 64 string
-   * @param Base64
-   * @param opts
+   * Get list of paired BLE devices
    */
-  printImageBase64: function (Base64: string, opts: PrinterImageOptions = {}) {
-    if (Platform.OS === "ios") {
-      RNUSBPrinter.printImageBase64(Base64, opts, (error: Error) =>
-        console.warn(error)
-      );
-    } else {
-      RNUSBPrinter.printImageBase64(
-        Base64,
-        opts?.imageWidth ?? 0,
-        opts?.imageHeight ?? 0,
-        (error: Error) => console.warn(error)
-      );
-    }
+  async getDeviceList(): Promise<IBLEPrinter[]> {
+    const devices = await getBLEPrinter().getDeviceList();
+    return devices.map((d) => ({
+      device_name: d.deviceName,
+      inner_mac_address: d.innerMacAddress,
+    }));
   },
+
   /**
-   * android print with encoder
-   * @param text
+   * Connect to a BLE printer
    */
-  printRaw: (text: string): void => {
-    if (Platform.OS === "ios") {
-    } else {
-      RNUSBPrinter.printRawData(text, (error: Error) => console.warn(error));
-    }
+  async connectPrinter(inner_mac_address: string): Promise<IBLEPrinter> {
+    const device = await getBLEPrinter().connectPrinter(inner_mac_address);
+    return {
+      device_name: device.deviceName,
+      inner_mac_address: device.innerMacAddress,
+    };
   },
+
   /**
-   * `columnWidth`
-   * 80mm => 46 character
-   * 58mm => 30 character
+   * Close current connection
    */
-  printColumnsText: (
+  async closeConn(): Promise<void> {
+    return getBLEPrinter().closeConnection();
+  },
+
+  // NEW: Connection state methods
+  /**
+   * Check if connected to a printer
+   * @returns Device MAC address if connected, undefined otherwise
+   */
+  isConnected(): string | undefined {
+    return getBLEPrinter().isConnected();
+  },
+
+  /**
+   * Get current connection state
+   */
+  getConnectionState() {
+    return getBLEPrinter().getConnectionState();
+  },
+
+  /**
+   * Listen to connection state changes
+   */
+  onConnectionStateChange(callback: (state: string) => void): () => void {
+    return getBLEPrinter().onConnectionStateChange(callback);
+  },
+
+  // NEW: Auto-reconnection
+  /**
+   * Enable/disable auto-reconnection
+   */
+  enableAutoReconnect(enabled: boolean): void {
+    getBLEPrinter().enableAutoReconnect(enabled);
+  },
+
+  setReconnectAttempts(maxAttempts: number): void {
+    getBLEPrinter().setReconnectAttempts(maxAttempts);
+  },
+
+  setReconnectDelay(delayMs: number): void {
+    getBLEPrinter().setReconnectDelay(delayMs);
+  },
+
+  // NEW: Print status
+  /**
+   * Check if printer is currently printing
+   */
+  isPrinting(): boolean {
+    return getBLEPrinter().isPrinting();
+  },
+
+  /**
+   * Get print queue status
+   */
+  getPrintQueue() {
+    return getBLEPrinter().getPrintQueue();
+  },
+
+  // Print methods - now return Promises
+  /**
+   * Print text
+   */
+  async printText(text: string, opts: PrinterOptions = {}) {
+    return getBLEPrinter().printText(text, opts);
+  },
+
+  /**
+   * Print bill with cut and beep
+   */
+  async printBill(text: string, opts: PrinterOptions = {}) {
+    return getBLEPrinter().printBill(text, opts);
+  },
+
+  /**
+   * Print raw Base64 data
+   */
+  async printRaw(data: string) {
+    return getBLEPrinter().printRaw(data);
+  },
+
+  /**
+   * Print image from URL
+   */
+  async printImage(imgUrl: string, opts: PrinterImageOptions = {}) {
+    return getBLEPrinter().printImage(imgUrl, opts);
+  },
+
+  /**
+   * Print image from Base64
+   */
+  async printImageBase64(base64: string, opts: PrinterImageOptions = {}) {
+    return getBLEPrinter().printImageBase64(base64, opts);
+  },
+
+  /**
+   * Print text in columns
+   */
+  async printColumnsText(
     texts: string[],
     columnWidth: number[],
-    columnAlignment: ColumnAlignment[],
-    columnStyle: string[],
-    opts: PrinterOptions = {}
-  ): void => {
-    const result = processColumnText(
-      texts,
-      columnWidth,
-      columnAlignment,
-      columnStyle
-    );
-    RNUSBPrinter.printRawData(textTo64Buffer(result, opts), (error: Error) =>
-      console.warn(error)
-    );
-  },
-};
-
-const BLEPrinter = {
-  init: (): Promise<void> =>
-    new Promise((resolve, reject) =>
-      RNBLEPrinter.init(
-        () => resolve(),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  getDeviceList: (): Promise<IBLEPrinter[]> =>
-    new Promise((resolve, reject) =>
-      RNBLEPrinter.getDeviceList(
-        (printers: IBLEPrinter[]) => resolve(printers),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  connectPrinter: (inner_mac_address: string): Promise<IBLEPrinter> =>
-    new Promise((resolve, reject) =>
-      RNBLEPrinter.connectPrinter(
-        inner_mac_address,
-        (printer: IBLEPrinter) => resolve(printer),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  closeConn: (): Promise<void> =>
-    new Promise((resolve) => {
-      RNBLEPrinter.closeConn();
-      resolve();
-    }),
-
-  printText: (text: string, opts: PrinterOptions = {}): void => {
-    if (Platform.OS === "ios") {
-      const processedText = textPreprocessingIOS(text, false, false);
-      RNBLEPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        (error: Error) => console.warn(error)
-      );
-    } else {
-      RNBLEPrinter.printRawData(textTo64Buffer(text, opts), (error: Error) =>
-        console.warn(error)
-      );
-    }
-  },
-
-  printBill: (text: string, opts: PrinterOptions = {}): void => {
-    if (Platform.OS === "ios") {
-      const processedText = textPreprocessingIOS(
-        text,
-        opts?.cut ?? true,
-        opts.beep ?? true
-      );
-      RNBLEPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        (error: Error) => console.warn(error)
-      );
-    } else {
-      RNBLEPrinter.printRawData(billTo64Buffer(text, opts), (error: Error) =>
-        console.warn(error)
-      );
-    }
-  },
-  /**
-   * image url
-   * @param imgUrl
-   * @param opts
-   */
-  printImage: function (imgUrl: string, opts: PrinterImageOptions = {}) {
-    if (Platform.OS === "ios") {
-      /**
-       * just development
-       */
-      RNBLEPrinter.printImageData(imgUrl, opts, (error: Error) =>
-        console.warn(error)
-      );
-    } else {
-      RNBLEPrinter.printImageData(
-        imgUrl,
-        opts?.imageWidth ?? 0,
-        opts?.imageHeight ?? 0,
-        (error: Error) => console.warn(error)
-      );
-    }
-  },
-  /**
-   * base 64 string
-   * @param Base64
-   * @param opts
-   */
-  printImageBase64: function (Base64: string, opts: PrinterImageOptions = {}) {
-    if (Platform.OS === "ios") {
-      /**
-       * just development
-       */
-      RNBLEPrinter.printImageBase64(Base64, opts, (error: Error) =>
-        console.warn(error)
-      );
-    } else {
-      /**
-       * just development
-       */
-      RNBLEPrinter.printImageBase64(
-        Base64,
-        opts?.imageWidth ?? 0,
-        opts?.imageHeight ?? 0,
-        (error: Error) => console.warn(error)
-      );
-    }
-  },
-  /**
-   * android print with encoder
-   * @param text
-   */
-  printRaw: (text: string): void => {
-    if (Platform.OS === "ios") {
-      var processedText = textPreprocessingIOS(text, false, false);
-
-      RNBLEPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        function (error) {
-          return console.warn(error);
-        }
-      );
-    } else {
-      RNBLEPrinter.printRawData(text, (error: Error) => console.warn(error));
-    }
-  },
-  /**
-   * `columnWidth`
-   * 80mm => 46 character
-   * 58mm => 30 character
-   */
-  printColumnsText: (
-    texts: string[],
-    columnWidth: number[],
-    columnAlignment: ColumnAlignment[],
-    columnStyle: string[],
-    opts: PrinterOptions = {}
-  ): void => {
-    const result = processColumnText(
-      texts,
-      columnWidth,
-      columnAlignment,
-      columnStyle
-    );
-    if (Platform.OS === "ios") {
-      const processedText = textPreprocessingIOS(result, false, false);
-      RNBLEPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        (error: Error) => console.warn(error)
-      );
-    } else {
-      RNBLEPrinter.printRawData(textTo64Buffer(result, opts), (error: Error) =>
-        console.warn(error)
-      );
-    }
-  },
-};
-
-const NetPrinter = {
-  init: (): Promise<void> =>
-    new Promise((resolve, reject) =>
-      RNNetPrinter.init(
-        () => resolve(),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  getDeviceList: (): Promise<INetPrinter[]> =>
-    new Promise((resolve, reject) =>
-      RNNetPrinter.getDeviceList(
-        (printers: INetPrinter[]) => resolve(printers),
-        (error: Error) => reject(error)
-      )
-    ),
-
-  connectPrinter: (
-    host: string,
-    port: number,
-    timeout?: number
-  ): Promise<INetPrinter> =>
-    new Promise(async (resolve, reject) => {
-      try {
-        await connectToHost(host, timeout);
-        RNNetPrinter.connectPrinter(
-          host,
-          port,
-          (printer: INetPrinter) => resolve(printer),
-          (error: Error) => reject(error)
-        );
-      } catch (error) {
-        reject(error?.message || `Connect to ${host} fail`);
-      }
-    }),
-
-  closeConn: (): Promise<void> =>
-    new Promise((resolve) => {
-      RNNetPrinter.closeConn();
-      resolve();
-    }),
-
-  printText: (text: string, opts = {}): void => {
-    if (Platform.OS === "ios") {
-      const processedText = textPreprocessingIOS(text, false, false);
-      RNNetPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        (error: Error) => console.warn(error)
-      );
-    } else {
-      RNNetPrinter.printRawData(textTo64Buffer(text, opts), (error: Error) =>
-        console.warn(error)
-      );
-    }
-  },
-
-  printBill: (text: string, opts: PrinterOptions = {}): void => {
-    if (Platform.OS === "ios") {
-      const processedText = textPreprocessingIOS(
-        text,
-        opts?.cut ?? true,
-        opts.beep ?? true
-      );
-      RNNetPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        (error: Error) => console.warn(error)
-      );
-    } else {
-      RNNetPrinter.printRawData(billTo64Buffer(text, opts), (error: Error) =>
-        console.warn(error)
-      );
-    }
-  },
-  /**
-   * image url
-   * @param imgUrl
-   * @param opts
-   */
-  printImage: function (imgUrl: string, opts: PrinterImageOptions = {}) {
-    if (Platform.OS === "ios") {
-      RNNetPrinter.printImageData(imgUrl, opts, (error: Error) =>
-        console.warn(error)
-      );
-    } else {
-      RNNetPrinter.printImageData(
-        imgUrl,
-        opts?.imageWidth ?? 0,
-        opts?.imageHeight ?? 0,
-        (error: Error) => console.warn(error)
-      );
-    }
-  },
-  /**
-   * base 64 string
-   * @param Base64
-   * @param opts
-   */
-  printImageBase64: function (Base64: string, opts: PrinterImageOptions = {}) {
-    if (Platform.OS === "ios") {
-      RNNetPrinter.printImageBase64(Base64, opts, (error: Error) =>
-        console.warn(error)
-      );
-    } else {
-      RNNetPrinter.printImageBase64(
-        Base64,
-        opts?.imageWidth ?? 0,
-        opts?.imageHeight ?? 0,
-        (error: Error) => console.warn(error)
-      );
-    }
-  },
-
-  /**
-   * Android print with encoder
-   * @param text
-   */
-  printRaw: (text: string): void => {
-    if (Platform.OS === "ios") {
-    } else {
-      RNNetPrinter.printRawData(text, (error: Error) => console.warn(error));
-    }
-  },
-
-  /**
-   * `columnWidth`
-   * 80mm => 46 character
-   * 58mm => 30 character
-   */
-  printColumnsText: (
-    texts: string[],
-    columnWidth: number[],
-    columnAlignment: ColumnAlignment[],
+    columnAlignment: number[],
     columnStyle: string[] = [],
     opts: PrinterOptions = {}
-  ): void => {
-    const result = processColumnText(
+  ) {
+    return getBLEPrinter().printColumnsText(
       texts,
       columnWidth,
       columnAlignment,
-      columnStyle
+      columnStyle,
+      opts
     );
-    if (Platform.OS === "ios") {
-      const processedText = textPreprocessingIOS(result, false, false);
-      RNNetPrinter.printRawData(
-        processedText.text,
-        processedText.opts,
-        (error: Error) => console.warn(error)
-      );
-    } else {
-      RNNetPrinter.printRawData(textTo64Buffer(result, opts), (error: Error) =>
-        console.warn(error)
-      );
-    }
+  },
+
+  // NEW: Image caching
+  /**
+   * Cache an image for faster future printing
+   */
+  async cacheImage(url: string, key: string): Promise<void> {
+    return getBLEPrinter().cacheImage(url, key);
+  },
+
+  /**
+   * Print a cached image
+   */
+  async printCachedImage(key: string, opts: PrinterImageOptions = {}) {
+    return getBLEPrinter().printCachedImage(key, opts);
+  },
+
+  /**
+   * Clear image cache
+   */
+  clearImageCache(): void {
+    getBLEPrinter().clearImageCache();
+  },
+
+  // NEW: Permissions
+  /**
+   * Request Bluetooth permissions
+   */
+  async askPermissions() {
+    return getBLEPrinter().askPermissions();
   },
 };
 
-const NetPrinterEventEmitter =
-  Platform.OS === "ios"
-    ? new NativeEventEmitter(RNNetPrinter)
-    : new NativeEventEmitter();
+// ============ Network Printer API ============
 
-export { COMMANDS, NetPrinter, BLEPrinter, USBPrinter, NetPrinterEventEmitter };
+/**
+ * Network Printer - Backward compatible API with new features
+ */
+export const NetPrinter = {
+  getInstance: getNetPrinter,
+
+  async init(): Promise<void> {
+    return getNetPrinter().init();
+  },
+
+  async getDeviceList(): Promise<INetPrinter[]> {
+    const devices = await getNetPrinter().getDeviceList();
+    return devices.map((d) => ({
+      host: d.host,
+      port: d.port,
+    }));
+  },
+
+  /**
+   * Connect to a network printer
+   */
+  async connectPrinter(
+    host: string,
+    port: number = 9100,
+    timeout?: number
+  ): Promise<INetPrinter> {
+    const device = await getNetPrinter().connectPrinter(host, port, timeout);
+    return {
+      host: device.host,
+      port: device.port,
+    };
+  },
+
+  async closeConn(): Promise<void> {
+    return getNetPrinter().closeConnection();
+  },
+
+  // NEW: Network scan
+  async scanNetwork(timeout?: number) {
+    return getNetPrinter().scanNetwork(timeout);
+  },
+
+  onScanProgress(callback: (progress: number) => void): () => void {
+    return getNetPrinter().onScanProgress(callback);
+  },
+
+  // Connection state
+  isConnected(): string | undefined {
+    return getNetPrinter().isConnected();
+  },
+
+  getConnectionState() {
+    return getNetPrinter().getConnectionState();
+  },
+
+  onConnectionStateChange(callback: (state: string) => void): () => void {
+    return getNetPrinter().onConnectionStateChange(callback);
+  },
+
+  // Print status
+  isPrinting(): boolean {
+    return getNetPrinter().isPrinting();
+  },
+
+  getPrintQueue() {
+    return getNetPrinter().getPrintQueue();
+  },
+
+  // Print methods
+  async printText(text: string, opts: PrinterOptions = {}) {
+    return getNetPrinter().printText(text, opts);
+  },
+
+  async printBill(text: string, opts: PrinterOptions = {}) {
+    return getNetPrinter().printBill(text, opts);
+  },
+
+  async printRaw(data: string) {
+    return getNetPrinter().printRaw(data);
+  },
+
+  async printImage(imgUrl: string, opts: PrinterImageOptions = {}) {
+    return getNetPrinter().printImage(imgUrl, opts);
+  },
+
+  async printImageBase64(base64: string, opts: PrinterImageOptions = {}) {
+    return getNetPrinter().printImageBase64(base64, opts);
+  },
+
+  async printColumnsText(
+    texts: string[],
+    columnWidth: number[],
+    columnAlignment: number[],
+    columnStyle: string[] = [],
+    opts: PrinterOptions = {}
+  ) {
+    return getNetPrinter().printColumnsText(
+      texts,
+      columnWidth,
+      columnAlignment,
+      columnStyle,
+      opts
+    );
+  },
+
+  // Image caching
+  async cacheImage(url: string, key: string): Promise<void> {
+    return getNetPrinter().cacheImage(url, key);
+  },
+
+  async printCachedImage(key: string, opts: PrinterImageOptions = {}) {
+    return getNetPrinter().printCachedImage(key, opts);
+  },
+
+  clearImageCache(): void {
+    getNetPrinter().clearImageCache();
+  },
+
+  // Permissions
+  async askPermissions() {
+    return getNetPrinter().askPermissions();
+  },
+};
+
+// ============ USB Printer API ============
+
+/**
+ * USB Printer - Backward compatible API with new features (Android only)
+ */
+export const USBPrinter = {
+  getInstance: getUSBPrinter,
+
+  async init(): Promise<void> {
+    return getUSBPrinter().init();
+  },
+
+  async getDeviceList(): Promise<IUSBPrinter[]> {
+    const devices = await getUSBPrinter().getDeviceList();
+    return devices.map((d) => ({
+      device_name: d.deviceName,
+      vendor_id: String(d.vendorId),
+      product_id: String(d.productId),
+    }));
+  },
+
+  async connectPrinter(vendorId: string, productId: string): Promise<IUSBPrinter> {
+    const device = await getUSBPrinter().connectPrinter(
+      parseInt(vendorId, 10),
+      parseInt(productId, 10)
+    );
+    return {
+      device_name: device.deviceName,
+      vendor_id: String(device.vendorId),
+      product_id: String(device.productId),
+    };
+  },
+
+  async closeConn(): Promise<void> {
+    return getUSBPrinter().closeConnection();
+  },
+
+  // NEW: USB events
+  onDeviceAttached(callback: (device: IUSBPrinter) => void): () => void {
+    return getUSBPrinter().onDeviceAttached((d) => {
+      callback({
+        device_name: d.deviceName,
+        vendor_id: String(d.vendorId),
+        product_id: String(d.productId),
+      });
+    });
+  },
+
+  onDeviceDetached(callback: () => void): () => void {
+    return getUSBPrinter().onDeviceDetached(callback);
+  },
+
+  // Connection state
+  isConnected(): string | undefined {
+    return getUSBPrinter().isConnected();
+  },
+
+  getConnectionState() {
+    return getUSBPrinter().getConnectionState();
+  },
+
+  onConnectionStateChange(callback: (state: string) => void): () => void {
+    return getUSBPrinter().onConnectionStateChange(callback);
+  },
+
+  // Print status
+  isPrinting(): boolean {
+    return getUSBPrinter().isPrinting();
+  },
+
+  getPrintQueue() {
+    return getUSBPrinter().getPrintQueue();
+  },
+
+  // Print methods
+  async printText(text: string, opts: PrinterOptions = {}) {
+    return getUSBPrinter().printText(text, opts);
+  },
+
+  async printBill(text: string, opts: PrinterOptions = {}) {
+    return getUSBPrinter().printBill(text, opts);
+  },
+
+  async printRaw(data: string) {
+    return getUSBPrinter().printRaw(data);
+  },
+
+  async printImage(imgUrl: string, opts: PrinterImageOptions = {}) {
+    return getUSBPrinter().printImage(imgUrl, opts);
+  },
+
+  async printImageBase64(base64: string, opts: PrinterImageOptions = {}) {
+    return getUSBPrinter().printImageBase64(base64, opts);
+  },
+
+  async printColumnsText(
+    texts: string[],
+    columnWidth: number[],
+    columnAlignment: number[],
+    columnStyle: string[] = [],
+    opts: PrinterOptions = {}
+  ) {
+    return getUSBPrinter().printColumnsText(
+      texts,
+      columnWidth,
+      columnAlignment,
+      columnStyle,
+      opts
+    );
+  },
+
+  // Image caching
+  async cacheImage(url: string, key: string): Promise<void> {
+    return getUSBPrinter().cacheImage(url, key);
+  },
+
+  async printCachedImage(key: string, opts: PrinterImageOptions = {}) {
+    return getUSBPrinter().printCachedImage(key, opts);
+  },
+
+  clearImageCache(): void {
+    getUSBPrinter().clearImageCache();
+  },
+
+  // Permissions
+  async askPermissions() {
+    return getUSBPrinter().askPermissions();
+  },
+};
+
+// ============ Event Emitter (Legacy) ============
+
+// Note: Events are now handled through onConnectionStateChange callbacks
+// This is kept for backward compatibility
+export const NetPrinterEventEmitter = {
+  addListener: (event: string, callback: (...args: unknown[]) => void) => {
+    if (event === 'scannerResolved') {
+      // Map to new scan API
+      console.warn(
+        'NetPrinterEventEmitter is deprecated. Use NetPrinter.scanNetwork() instead.'
+      );
+    }
+    return { remove: () => {} };
+  },
+};
 
 export enum RN_THERMAL_RECEIPT_PRINTER_EVENTS {
-  EVENT_NET_PRINTER_SCANNED_SUCCESS = "scannerResolved",
-  EVENT_NET_PRINTER_SCANNING = "scannerRunning",
-  EVENT_NET_PRINTER_SCANNED_ERROR = "registerError",
+  EVENT_NET_PRINTER_SCANNED_SUCCESS = 'scannerResolved',
+  EVENT_NET_PRINTER_SCANNING = 'scannerRunning',
+  EVENT_NET_PRINTER_SCANNED_ERROR = 'registerError',
 }
