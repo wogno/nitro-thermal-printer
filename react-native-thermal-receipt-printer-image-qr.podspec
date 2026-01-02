@@ -8,47 +8,59 @@ Pod::Spec.new do |s|
   s.summary      = package['description']
   s.license      = package['license']
 
+  # Module name must match nitro.json iosModuleName for Swift/C++ interop
+  s.module_name  = 'NitroThermalPrinter'
+
   s.authors      = package['author']
   s.homepage     = package['homepage']
   s.platforms    = { :ios => '15.0' }
 
   s.source       = { :git => "https://github.com/thiendangit/react-native-thermal-receipt-printer-image-qr", :tag => "v#{s.version}" }
 
-  # Source files
+  # Source files - Swift sources and PrinterSDK headers
   s.source_files = [
-    "ios/**/*.{h,m,mm,swift}",
-    "nitrogen/generated/ios/**/*.{h,hpp,cpp,swift}",
-    "nitrogen/generated/shared/**/*.{h,hpp,cpp}"
+    "ios/Sources/**/*.swift",
+    "ios/PrinterSDK/*.h"
   ]
 
+  # Preserve modulemap for Swift/C interop
+  s.preserve_paths = "ios/PrinterSDK/module.modulemap"
+
   # Public headers
-  s.public_header_files = "ios/**/*.h"
+  s.public_header_files = "ios/PrinterSDK/*.h"
 
   # Swift version
   s.swift_version = '5.9'
 
-  # Vendored libraries (PrinterSDK)
-  s.ios.vendored_libraries = "ios/PrinterSDK/libPrinterSDK.a"
-
   # Build settings
   s.pod_target_xcconfig = {
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
-    'HEADER_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/ios/PrinterSDK" "$(PODS_TARGET_SRCROOT)/nitrogen/generated/ios" "$(PODS_TARGET_SRCROOT)/nitrogen/generated/shared"',
+    'CLANG_CXX_LIBRARY' => 'libc++',
+    'HEADER_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/ios/PrinterSDK"',
     'DEFINES_MODULE' => 'YES',
-    'SWIFT_OBJC_BRIDGING_HEADER' => '$(PODS_TARGET_SRCROOT)/ios/NitroThermalPrinter-Bridging-Header.h'
+    'SWIFT_INCLUDE_PATHS' => '"$(PODS_TARGET_SRCROOT)/ios/PrinterSDK"',
+    'OTHER_SWIFT_FLAGS' => '-no-verify-emitted-module-interface',
+    # Only link PrinterSDK on device builds
+    'OTHER_LDFLAGS[sdk=iphoneos*]' => '-lPrinterSDK',
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/ios/PrinterSDK'
   }
 
-  s.user_target_xcconfig = {
-    'HEADER_SEARCH_PATHS' => '"$(PODS_ROOT)/Headers/Public/react-native-thermal-receipt-printer-image-qr"'
-  }
+  # Vendored libraries - static library for device builds
+  s.vendored_libraries = 'ios/PrinterSDK/libPrinterSDK.a'
 
   # Dependencies
   s.dependency 'React-Core'
-  s.dependency 'NitroModules'
 
   # Frameworks
   s.frameworks = 'CoreBluetooth', 'Foundation', 'UIKit'
 
+  # Add C++ standard library
+  s.libraries = 'c++'
+
   # Requires ARC
   s.requires_arc = true
+
+  # Load and apply Nitrogen autolinking
+  load 'nitrogen/generated/ios/NitroThermalPrinter+autolinking.rb'
+  add_nitrogen_files(s)
 end

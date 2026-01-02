@@ -3,7 +3,7 @@ import UIKit
 /// LRU Image cache for thermal printer images.
 /// Caches up to maxSize images, evicting least recently used when full.
 /// Uses URL as key for caching.
-public class ImageCache {
+internal class ImageCache {
     private let maxSize: Int
     private var cache: [String: UIImage] = [:]
     private var accessOrder: [String] = []
@@ -125,7 +125,7 @@ public class ImageCache {
 }
 
 /// Errors for ImageCache
-public enum ImageCacheError: Error, LocalizedError {
+internal enum ImageCacheError: Error, LocalizedError {
     case invalidUrl
     case invalidImageData
     case downloadFailed

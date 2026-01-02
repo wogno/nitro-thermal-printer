@@ -38,7 +38,7 @@ const options_controller = {
   tailingLine: line_bytes,
 };
 
-const controller = {
+const controller: Record<string, Buffer> = {
   "<M>": m_start_bytes,
   "</M>": m_end_bytes,
   "<B>": b_start_bytes,
@@ -106,11 +106,6 @@ export function exchange_text(text: string, options: IOptions): Buffer {
     }
   }
   temp.length && bytes.concat(iconv.encode(temp, m_options.encoding));
-
-  // check for "encoding" flag
-  if (typeof m_options["encoding"] === "boolean" && options_controller["encoding"]) {
-    bytes.concat(options_controller["encoding"]);
-  }
 
   // check for "tailingLine" flag
   if (typeof m_options["tailingLine"] === "boolean" && m_options["tailingLine"] && options_controller["tailingLine"]) {

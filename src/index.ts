@@ -6,9 +6,16 @@
  */
 
 import { NitroModules } from 'react-native-nitro-modules';
-import type { HybridBLEPrinter } from './specs/BLEPrinter.nitro';
-import type { HybridNetPrinter } from './specs/NetPrinter.nitro';
-import type { HybridUSBPrinter } from './specs/USBPrinter.nitro';
+import type { BLEPrinter as HybridBLEPrinter } from './specs/BLEPrinter.nitro';
+import type { NetPrinter as HybridNetPrinter } from './specs/NetPrinter.nitro';
+import type { USBPrinter as HybridUSBPrinter } from './specs/USBPrinter.nitro';
+import type {
+  PrintOptions as NitroPrintOptions,
+  ImagePrintOptions as NitroImagePrintOptions,
+  PrintJobStatus as NitroPrintJobStatus,
+  USBDevice as NitroUSBDevice,
+} from './specs/types';
+import { PrinterWidthType, ConnectionState } from './specs/types';
 
 // Re-export types
 export * from './specs/types';
@@ -26,8 +33,6 @@ export interface PrinterOptions {
   encoding?: string;
 }
 
-// PrinterWidth is exported from ./specs/types
-
 export interface PrinterImageOptions {
   beep?: boolean;
   cut?: boolean;
@@ -35,7 +40,7 @@ export interface PrinterImageOptions {
   encoding?: string;
   imageWidth?: number;
   imageHeight?: number;
-  printerWidthType?: PrinterWidth;
+  printerWidthType?: PrinterWidthType;
   paddingX?: number;
 }
 
@@ -55,7 +60,29 @@ export interface INetPrinter {
   port: number;
 }
 
-export { ColumnAlignment } from './specs/types';
+// ============ Helper Functions ============
+
+function toNitroPrintOptions(opts: PrinterOptions = {}): NitroPrintOptions {
+  return {
+    beep: opts.beep ?? false,
+    cut: opts.cut ?? false,
+    tailingLine: opts.tailingLine ?? false,
+    encoding: opts.encoding ?? 'UTF-8',
+  };
+}
+
+function toNitroImageOptions(opts: PrinterImageOptions = {}): NitroImagePrintOptions {
+  return {
+    beep: opts.beep ?? false,
+    cut: opts.cut ?? false,
+    tailingLine: opts.tailingLine ?? false,
+    encoding: opts.encoding ?? 'UTF-8',
+    imageWidth: opts.imageWidth ?? 0,
+    imageHeight: opts.imageHeight ?? 0,
+    printerWidthType: opts.printerWidthType ?? PrinterWidthType.MM_80,
+    paddingX: opts.paddingX ?? 0,
+  };
+}
 
 // ============ Hybrid Object Instances ============
 
@@ -65,21 +92,21 @@ let _usbPrinter: HybridUSBPrinter | null = null;
 
 function getBLEPrinter(): HybridBLEPrinter {
   if (!_blePrinter) {
-    _blePrinter = NitroModules.createHybridObject<HybridBLEPrinter>('HybridBLEPrinter');
+    _blePrinter = NitroModules.createHybridObject<HybridBLEPrinter>('BLEPrinter');
   }
   return _blePrinter;
 }
 
 function getNetPrinter(): HybridNetPrinter {
   if (!_netPrinter) {
-    _netPrinter = NitroModules.createHybridObject<HybridNetPrinter>('HybridNetPrinter');
+    _netPrinter = NitroModules.createHybridObject<HybridNetPrinter>('NetPrinter');
   }
   return _netPrinter;
 }
 
 function getUSBPrinter(): HybridUSBPrinter {
   if (!_usbPrinter) {
-    _usbPrinter = NitroModules.createHybridObject<HybridUSBPrinter>('HybridUSBPrinter');
+    _usbPrinter = NitroModules.createHybridObject<HybridUSBPrinter>('USBPrinter');
   }
   return _usbPrinter;
 }
@@ -99,7 +126,7 @@ export const BLEPrinter = {
    * Initialize the BLE printer module
    */
   async init(): Promise<void> {
-    return getBLEPrinter().init();
+    return getBLEPrinter().initialize();
   },
 
   /**
@@ -137,21 +164,25 @@ export const BLEPrinter = {
    * @returns Device MAC address if connected, undefined otherwise
    */
   isConnected(): string | undefined {
-    return getBLEPrinter().isConnected();
+    return getBLEPrinter().isConnected() ?? undefined;
   },
 
   /**
    * Get current connection state
    */
-  getConnectionState() {
+  getConnectionState(): ConnectionState {
     return getBLEPrinter().getConnectionState();
   },
 
   /**
    * Listen to connection state changes
+   * @returns Unsubscribe function
    */
-  onConnectionStateChange(callback: (state: string) => void): () => void {
-    return getBLEPrinter().onConnectionStateChange(callback);
+  onConnectionStateChange(callback: (state: ConnectionState) => void): () => void {
+    const subscriptionId = getBLEPrinter().addConnectionStateListener(callback);
+    return () => {
+      getBLEPrinter().removeConnectionStateListener(subscriptionId);
+    };
   },
 
   // NEW: Auto-reconnection
@@ -181,7 +212,7 @@ export const BLEPrinter = {
   /**
    * Get print queue status
    */
-  getPrintQueue() {
+  getPrintQueue(): NitroPrintJobStatus[] {
     return getBLEPrinter().getPrintQueue();
   },
 
@@ -189,36 +220,36 @@ export const BLEPrinter = {
   /**
    * Print text
    */
-  async printText(text: string, opts: PrinterOptions = {}) {
-    return getBLEPrinter().printText(text, opts);
+  async printText(text: string, opts: PrinterOptions = {}): Promise<NitroPrintJobStatus> {
+    return getBLEPrinter().printText(text, toNitroPrintOptions(opts));
   },
 
   /**
    * Print bill with cut and beep
    */
-  async printBill(text: string, opts: PrinterOptions = {}) {
-    return getBLEPrinter().printBill(text, opts);
+  async printBill(text: string, opts: PrinterOptions = {}): Promise<NitroPrintJobStatus> {
+    return getBLEPrinter().printBill(text, toNitroPrintOptions(opts));
   },
 
   /**
    * Print raw Base64 data
    */
-  async printRaw(data: string) {
+  async printRaw(data: string): Promise<NitroPrintJobStatus> {
     return getBLEPrinter().printRaw(data);
   },
 
   /**
    * Print image from URL
    */
-  async printImage(imgUrl: string, opts: PrinterImageOptions = {}) {
-    return getBLEPrinter().printImage(imgUrl, opts);
+  async printImage(imgUrl: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getBLEPrinter().printImage(imgUrl, toNitroImageOptions(opts));
   },
 
   /**
    * Print image from Base64
    */
-  async printImageBase64(base64: string, opts: PrinterImageOptions = {}) {
-    return getBLEPrinter().printImageBase64(base64, opts);
+  async printImageBase64(base64: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getBLEPrinter().printImageBase64(base64, toNitroImageOptions(opts));
   },
 
   /**
@@ -230,13 +261,13 @@ export const BLEPrinter = {
     columnAlignment: number[],
     columnStyle: string[] = [],
     opts: PrinterOptions = {}
-  ) {
+  ): Promise<NitroPrintJobStatus> {
     return getBLEPrinter().printColumnsText(
       texts,
       columnWidth,
       columnAlignment,
       columnStyle,
-      opts
+      toNitroPrintOptions(opts)
     );
   },
 
@@ -251,8 +282,8 @@ export const BLEPrinter = {
   /**
    * Print a cached image
    */
-  async printCachedImage(key: string, opts: PrinterImageOptions = {}) {
-    return getBLEPrinter().printCachedImage(key, opts);
+  async printCachedImage(key: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getBLEPrinter().printCachedImage(key, toNitroImageOptions(opts));
   },
 
   /**
@@ -280,7 +311,7 @@ export const NetPrinter = {
   getInstance: getNetPrinter,
 
   async init(): Promise<void> {
-    return getNetPrinter().init();
+    return getNetPrinter().initialize();
   },
 
   async getDeviceList(): Promise<INetPrinter[]> {
@@ -297,7 +328,7 @@ export const NetPrinter = {
   async connectPrinter(
     host: string,
     port: number = 9100,
-    timeout?: number
+    timeout: number = 4000
   ): Promise<INetPrinter> {
     const device = await getNetPrinter().connectPrinter(host, port, timeout);
     return {
@@ -311,25 +342,31 @@ export const NetPrinter = {
   },
 
   // NEW: Network scan
-  async scanNetwork(timeout?: number) {
+  async scanNetwork(timeout: number = 5000) {
     return getNetPrinter().scanNetwork(timeout);
   },
 
   onScanProgress(callback: (progress: number) => void): () => void {
-    return getNetPrinter().onScanProgress(callback);
+    const subscriptionId = getNetPrinter().addScanProgressListener(callback);
+    return () => {
+      getNetPrinter().removeScanProgressListener(subscriptionId);
+    };
   },
 
   // Connection state
   isConnected(): string | undefined {
-    return getNetPrinter().isConnected();
+    return getNetPrinter().isConnected() ?? undefined;
   },
 
-  getConnectionState() {
+  getConnectionState(): ConnectionState {
     return getNetPrinter().getConnectionState();
   },
 
-  onConnectionStateChange(callback: (state: string) => void): () => void {
-    return getNetPrinter().onConnectionStateChange(callback);
+  onConnectionStateChange(callback: (state: ConnectionState) => void): () => void {
+    const subscriptionId = getNetPrinter().addConnectionStateListener(callback);
+    return () => {
+      getNetPrinter().removeConnectionStateListener(subscriptionId);
+    };
   },
 
   // Print status
@@ -337,29 +374,29 @@ export const NetPrinter = {
     return getNetPrinter().isPrinting();
   },
 
-  getPrintQueue() {
+  getPrintQueue(): NitroPrintJobStatus[] {
     return getNetPrinter().getPrintQueue();
   },
 
   // Print methods
-  async printText(text: string, opts: PrinterOptions = {}) {
-    return getNetPrinter().printText(text, opts);
+  async printText(text: string, opts: PrinterOptions = {}): Promise<NitroPrintJobStatus> {
+    return getNetPrinter().printText(text, toNitroPrintOptions(opts));
   },
 
-  async printBill(text: string, opts: PrinterOptions = {}) {
-    return getNetPrinter().printBill(text, opts);
+  async printBill(text: string, opts: PrinterOptions = {}): Promise<NitroPrintJobStatus> {
+    return getNetPrinter().printBill(text, toNitroPrintOptions(opts));
   },
 
-  async printRaw(data: string) {
+  async printRaw(data: string): Promise<NitroPrintJobStatus> {
     return getNetPrinter().printRaw(data);
   },
 
-  async printImage(imgUrl: string, opts: PrinterImageOptions = {}) {
-    return getNetPrinter().printImage(imgUrl, opts);
+  async printImage(imgUrl: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getNetPrinter().printImage(imgUrl, toNitroImageOptions(opts));
   },
 
-  async printImageBase64(base64: string, opts: PrinterImageOptions = {}) {
-    return getNetPrinter().printImageBase64(base64, opts);
+  async printImageBase64(base64: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getNetPrinter().printImageBase64(base64, toNitroImageOptions(opts));
   },
 
   async printColumnsText(
@@ -368,13 +405,13 @@ export const NetPrinter = {
     columnAlignment: number[],
     columnStyle: string[] = [],
     opts: PrinterOptions = {}
-  ) {
+  ): Promise<NitroPrintJobStatus> {
     return getNetPrinter().printColumnsText(
       texts,
       columnWidth,
       columnAlignment,
       columnStyle,
-      opts
+      toNitroPrintOptions(opts)
     );
   },
 
@@ -383,8 +420,8 @@ export const NetPrinter = {
     return getNetPrinter().cacheImage(url, key);
   },
 
-  async printCachedImage(key: string, opts: PrinterImageOptions = {}) {
-    return getNetPrinter().printCachedImage(key, opts);
+  async printCachedImage(key: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getNetPrinter().printCachedImage(key, toNitroImageOptions(opts));
   },
 
   clearImageCache(): void {
@@ -406,7 +443,7 @@ export const USBPrinter = {
   getInstance: getUSBPrinter,
 
   async init(): Promise<void> {
-    return getUSBPrinter().init();
+    return getUSBPrinter().initialize();
   },
 
   async getDeviceList(): Promise<IUSBPrinter[]> {
@@ -436,30 +473,39 @@ export const USBPrinter = {
 
   // NEW: USB events
   onDeviceAttached(callback: (device: IUSBPrinter) => void): () => void {
-    return getUSBPrinter().onDeviceAttached((d) => {
+    const subscriptionId = getUSBPrinter().addDeviceAttachedListener((d: NitroUSBDevice) => {
       callback({
         device_name: d.deviceName,
         vendor_id: String(d.vendorId),
         product_id: String(d.productId),
       });
     });
+    return () => {
+      getUSBPrinter().removeDeviceAttachedListener(subscriptionId);
+    };
   },
 
   onDeviceDetached(callback: () => void): () => void {
-    return getUSBPrinter().onDeviceDetached(callback);
+    const subscriptionId = getUSBPrinter().addDeviceDetachedListener(callback);
+    return () => {
+      getUSBPrinter().removeDeviceDetachedListener(subscriptionId);
+    };
   },
 
   // Connection state
   isConnected(): string | undefined {
-    return getUSBPrinter().isConnected();
+    return getUSBPrinter().isConnected() ?? undefined;
   },
 
-  getConnectionState() {
+  getConnectionState(): ConnectionState {
     return getUSBPrinter().getConnectionState();
   },
 
-  onConnectionStateChange(callback: (state: string) => void): () => void {
-    return getUSBPrinter().onConnectionStateChange(callback);
+  onConnectionStateChange(callback: (state: ConnectionState) => void): () => void {
+    const subscriptionId = getUSBPrinter().addConnectionStateListener(callback);
+    return () => {
+      getUSBPrinter().removeConnectionStateListener(subscriptionId);
+    };
   },
 
   // Print status
@@ -467,29 +513,29 @@ export const USBPrinter = {
     return getUSBPrinter().isPrinting();
   },
 
-  getPrintQueue() {
+  getPrintQueue(): NitroPrintJobStatus[] {
     return getUSBPrinter().getPrintQueue();
   },
 
   // Print methods
-  async printText(text: string, opts: PrinterOptions = {}) {
-    return getUSBPrinter().printText(text, opts);
+  async printText(text: string, opts: PrinterOptions = {}): Promise<NitroPrintJobStatus> {
+    return getUSBPrinter().printText(text, toNitroPrintOptions(opts));
   },
 
-  async printBill(text: string, opts: PrinterOptions = {}) {
-    return getUSBPrinter().printBill(text, opts);
+  async printBill(text: string, opts: PrinterOptions = {}): Promise<NitroPrintJobStatus> {
+    return getUSBPrinter().printBill(text, toNitroPrintOptions(opts));
   },
 
-  async printRaw(data: string) {
+  async printRaw(data: string): Promise<NitroPrintJobStatus> {
     return getUSBPrinter().printRaw(data);
   },
 
-  async printImage(imgUrl: string, opts: PrinterImageOptions = {}) {
-    return getUSBPrinter().printImage(imgUrl, opts);
+  async printImage(imgUrl: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getUSBPrinter().printImage(imgUrl, toNitroImageOptions(opts));
   },
 
-  async printImageBase64(base64: string, opts: PrinterImageOptions = {}) {
-    return getUSBPrinter().printImageBase64(base64, opts);
+  async printImageBase64(base64: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getUSBPrinter().printImageBase64(base64, toNitroImageOptions(opts));
   },
 
   async printColumnsText(
@@ -498,13 +544,13 @@ export const USBPrinter = {
     columnAlignment: number[],
     columnStyle: string[] = [],
     opts: PrinterOptions = {}
-  ) {
+  ): Promise<NitroPrintJobStatus> {
     return getUSBPrinter().printColumnsText(
       texts,
       columnWidth,
       columnAlignment,
       columnStyle,
-      opts
+      toNitroPrintOptions(opts)
     );
   },
 
@@ -513,8 +559,8 @@ export const USBPrinter = {
     return getUSBPrinter().cacheImage(url, key);
   },
 
-  async printCachedImage(key: string, opts: PrinterImageOptions = {}) {
-    return getUSBPrinter().printCachedImage(key, opts);
+  async printCachedImage(key: string, opts: PrinterImageOptions = {}): Promise<NitroPrintJobStatus> {
+    return getUSBPrinter().printCachedImage(key, toNitroImageOptions(opts));
   },
 
   clearImageCache(): void {
@@ -532,7 +578,7 @@ export const USBPrinter = {
 // Note: Events are now handled through onConnectionStateChange callbacks
 // This is kept for backward compatibility
 export const NetPrinterEventEmitter = {
-  addListener: (event: string, callback: (...args: unknown[]) => void) => {
+  addListener: (event: string, _callback: (...args: unknown[]) => void) => {
     if (event === 'scannerResolved') {
       // Map to new scan API
       console.warn(

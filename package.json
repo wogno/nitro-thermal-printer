@@ -1,6 +1,6 @@
 {
   "name": "react-native-thermal-receipt-printer-image-qr",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "High-performance React Native library for thermal receipt printers (USB/BLE/Net) using Nitro Modules",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -14,7 +14,7 @@
     "build": "bob build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "codegen": "nitro-codegen",
+    "codegen": "nitrogen",
     "prepare": "bob build",
     "release": "release-it"
   },
@@ -59,23 +59,34 @@
   ],
   "dependencies": {
     "buffer": "^6.0.3",
-    "iconv-lite": "^0.6.3",
-    "react-native-nitro-modules": "^0.18.2"
+    "iconv-lite": "^0.6.3"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "@types/react": "^18.2.0",
+    "@types/react": "^19.0.0",
     "eslint": "^8.50.0",
-    "nitro-codegen": "^0.18.2",
-    "react": "^18.2.0",
-    "react-native": "^0.76.0",
-    "react-native-builder-bob": "^0.23.0",
-    "typescript": "^5.3.0"
+    "nitrogen": "^0.32.0",
+    "react": "^19.1.0",
+    "react-native": "^0.80.0",
+    "react-native-builder-bob": "^0.40.17",
+    "react-native-nitro-modules": "^0.32.0",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
-    "react-native": ">=0.76.0",
-    "react-native-nitro-modules": ">=0.18.0"
+    "react-native": ">=0.80.0",
+    "react-native-nitro-modules": ">=0.32.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": false
+    }
+  },
+  "reactNativeManifest": {
+    "architectures": {
+      "new": true,
+      "old": false
+    }
   },
   "engines": {
     "node": ">=18"
@@ -89,7 +100,12 @@
     "targets": [
       "commonjs",
       "module",
-      ["typescript", { "project": "tsconfig.build.json" }]
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
     ]
   },
   "codegenConfig": {
