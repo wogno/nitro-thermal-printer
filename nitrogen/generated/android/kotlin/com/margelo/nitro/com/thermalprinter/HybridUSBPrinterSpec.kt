@@ -143,6 +143,30 @@ abstract class HybridUSBPrinterSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun printTextSync(text: String, options: PrintOptions): String
+  
+  @DoNotStrip
+  @Keep
+  abstract fun printBillSync(text: String, options: PrintOptions): String
+  
+  @DoNotStrip
+  @Keep
+  abstract fun printRawSync(data: String): String
+  
+  @DoNotStrip
+  @Keep
+  abstract fun printImageBase64Sync(base64: String, options: ImagePrintOptions): String
+  
+  @DoNotStrip
+  @Keep
+  abstract fun printColumnsTextSync(texts: Array<String>, columnWidths: DoubleArray, columnAlignments: DoubleArray, columnStyles: Array<String>, options: PrintOptions): String
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getJobStatus(jobId: String): PrintJobStatus?
+  
+  @DoNotStrip
+  @Keep
   abstract fun cacheImage(url: String, key: String): Promise<Unit>
   
   @DoNotStrip

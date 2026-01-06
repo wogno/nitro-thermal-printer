@@ -108,17 +108,17 @@ export function exchange_text(text: string, options: IOptions): Buffer {
   temp.length && bytes.concat(iconv.encode(temp, m_options.encoding));
 
   // check for "tailingLine" flag
-  if (typeof m_options["tailingLine"] === "boolean" && m_options["tailingLine"] && options_controller["tailingLine"]) {
+  if (typeof m_options["tailingLine"] === "boolean" && m_options["tailingLine"]) {
     bytes.concat(options_controller["tailingLine"]);
   }
 
   // check for "cut" flag
-  if (typeof m_options["cut"] === "boolean" && m_options["cut"] && options_controller["cut"]) {
+  if (typeof m_options["cut"] === "boolean" && m_options["cut"]) {
     bytes.concat(options_controller["cut"]);
   }
 
   // check for "beep" flag
-  if (typeof m_options["beep"] === "boolean" && m_options["beep"] && options_controller["beep"]) {
+  if (typeof m_options["beep"] === "boolean" && m_options["beep"]) {
     bytes.concat(options_controller["beep"]);
   }
 

@@ -18,14 +18,24 @@ namespace margelo::nitro::thermalprinter { class HybridBLEPrinterSpec; }
 namespace margelo::nitro::thermalprinter { class HybridNetPrinterSpec; }
 // Forward declaration of `HybridUSBPrinterSpec` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { class HybridUSBPrinterSpec; }
+// Forward declaration of `ImagePrintOptions` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct ImagePrintOptions; }
 // Forward declaration of `NetDevice` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct NetDevice; }
 // Forward declaration of `PermissionResult` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct PermissionResult; }
+// Forward declaration of `PrintBulkItemType` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { enum class PrintBulkItemType; }
+// Forward declaration of `PrintBulkItem` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct PrintBulkItem; }
 // Forward declaration of `PrintJobStatusType` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { enum class PrintJobStatusType; }
 // Forward declaration of `PrintJobStatus` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct PrintJobStatus; }
+// Forward declaration of `PrintOptions` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct PrintOptions; }
+// Forward declaration of `PrinterWidthType` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { enum class PrinterWidthType; }
 // Forward declaration of `USBDevice` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct USBDevice; }
 
@@ -43,10 +53,15 @@ namespace NitroThermalPrinter { class HybridUSBPrinterSpec_cxx; }
 #include "HybridBLEPrinterSpec.hpp"
 #include "HybridNetPrinterSpec.hpp"
 #include "HybridUSBPrinterSpec.hpp"
+#include "ImagePrintOptions.hpp"
 #include "NetDevice.hpp"
 #include "PermissionResult.hpp"
+#include "PrintBulkItem.hpp"
+#include "PrintBulkItemType.hpp"
 #include "PrintJobStatus.hpp"
 #include "PrintJobStatusType.hpp"
+#include "PrintOptions.hpp"
+#include "PrinterWidthType.hpp"
 #include "USBDevice.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/PromiseHolder.hpp>
@@ -303,6 +318,92 @@ namespace margelo::nitro::thermalprinter::bridge::swift {
     return vector;
   }
   
+  // pragma MARK: std::optional<PrintJobStatus>
+  /**
+   * Specialized version of `std::optional<PrintJobStatus>`.
+   */
+  using std__optional_PrintJobStatus_ = std::optional<PrintJobStatus>;
+  inline std::optional<PrintJobStatus> create_std__optional_PrintJobStatus_(const PrintJobStatus& value) noexcept {
+    return std::optional<PrintJobStatus>(value);
+  }
+  inline bool has_value_std__optional_PrintJobStatus_(const std::optional<PrintJobStatus>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PrintJobStatus get_std__optional_PrintJobStatus_(const std::optional<PrintJobStatus>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<PrintOptions>
+  /**
+   * Specialized version of `std::optional<PrintOptions>`.
+   */
+  using std__optional_PrintOptions_ = std::optional<PrintOptions>;
+  inline std::optional<PrintOptions> create_std__optional_PrintOptions_(const PrintOptions& value) noexcept {
+    return std::optional<PrintOptions>(value);
+  }
+  inline bool has_value_std__optional_PrintOptions_(const std::optional<PrintOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PrintOptions get_std__optional_PrintOptions_(const std::optional<PrintOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::vector<std::string>>
+  /**
+   * Specialized version of `std::optional<std::vector<std::string>>`.
+   */
+  using std__optional_std__vector_std__string__ = std::optional<std::vector<std::string>>;
+  inline std::optional<std::vector<std::string>> create_std__optional_std__vector_std__string__(const std::vector<std::string>& value) noexcept {
+    return std::optional<std::vector<std::string>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_std__string__(const std::optional<std::vector<std::string>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<std::string> get_std__optional_std__vector_std__string__(const std::optional<std::vector<std::string>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<std::vector<double>>
+  /**
+   * Specialized version of `std::optional<std::vector<double>>`.
+   */
+  using std__optional_std__vector_double__ = std::optional<std::vector<double>>;
+  inline std::optional<std::vector<double>> create_std__optional_std__vector_double__(const std::vector<double>& value) noexcept {
+    return std::optional<std::vector<double>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<double> get_std__optional_std__vector_double__(const std::optional<std::vector<double>>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::optional<ImagePrintOptions>
+  /**
+   * Specialized version of `std::optional<ImagePrintOptions>`.
+   */
+  using std__optional_ImagePrintOptions_ = std::optional<ImagePrintOptions>;
+  inline std::optional<ImagePrintOptions> create_std__optional_ImagePrintOptions_(const ImagePrintOptions& value) noexcept {
+    return std::optional<ImagePrintOptions>(value);
+  }
+  inline bool has_value_std__optional_ImagePrintOptions_(const std::optional<ImagePrintOptions>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline ImagePrintOptions get_std__optional_ImagePrintOptions_(const std::optional<ImagePrintOptions>& optional) noexcept {
+    return *optional;
+  }
+  
+  // pragma MARK: std::vector<PrintBulkItem>
+  /**
+   * Specialized version of `std::vector<PrintBulkItem>`.
+   */
+  using std__vector_PrintBulkItem_ = std::vector<PrintBulkItem>;
+  inline std::vector<PrintBulkItem> create_std__vector_PrintBulkItem_(size_t size) noexcept {
+    std::vector<PrintBulkItem> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
   // pragma MARK: std::shared_ptr<Promise<PermissionResult>>
   /**
    * Specialized version of `std::shared_ptr<Promise<PermissionResult>>`.
@@ -437,6 +538,15 @@ namespace margelo::nitro::thermalprinter::bridge::swift {
   }
   inline Result_std__shared_ptr_Promise_PrintJobStatus___ create_Result_std__shared_ptr_Promise_PrintJobStatus___(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<PrintJobStatus>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::optional<PrintJobStatus>>
+  using Result_std__optional_PrintJobStatus__ = Result<std::optional<PrintJobStatus>>;
+  inline Result_std__optional_PrintJobStatus__ create_Result_std__optional_PrintJobStatus__(const std::optional<PrintJobStatus>& value) noexcept {
+    return Result<std::optional<PrintJobStatus>>::withValue(value);
+  }
+  inline Result_std__optional_PrintJobStatus__ create_Result_std__optional_PrintJobStatus__(const std::exception_ptr& error) noexcept {
+    return Result<std::optional<PrintJobStatus>>::withError(error);
   }
   
   // pragma MARK: Result<std::shared_ptr<Promise<PermissionResult>>>

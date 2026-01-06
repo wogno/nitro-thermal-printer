@@ -34,6 +34,12 @@ public protocol HybridUSBPrinterSpec_protocol: HybridObject {
   func printImage(imageUrl: String, options: ImagePrintOptions) throws -> Promise<PrintJobStatus>
   func printImageBase64(base64: String, options: ImagePrintOptions) throws -> Promise<PrintJobStatus>
   func printColumnsText(texts: [String], columnWidths: [Double], columnAlignments: [Double], columnStyles: [String], options: PrintOptions) throws -> Promise<PrintJobStatus>
+  func printTextSync(text: String, options: PrintOptions) throws -> String
+  func printBillSync(text: String, options: PrintOptions) throws -> String
+  func printRawSync(data: String) throws -> String
+  func printImageBase64Sync(base64: String, options: ImagePrintOptions) throws -> String
+  func printColumnsTextSync(texts: [String], columnWidths: [Double], columnAlignments: [Double], columnStyles: [String], options: PrintOptions) throws -> String
+  func getJobStatus(jobId: String) throws -> PrintJobStatus?
   func cacheImage(url: String, key: String) throws -> Promise<Void>
   func printCachedImage(key: String, options: ImagePrintOptions) throws -> Promise<PrintJobStatus>
   func clearImageCache() throws -> Void

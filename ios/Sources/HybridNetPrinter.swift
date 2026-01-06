@@ -22,6 +22,7 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
     private var connectedDeviceId: String?
     private var isPrintingState = false
     private var printJobs: [String: PrintJobStatus] = [:]
+    private let printQueue = DispatchQueue(label: "com.thermalprinter.netprinter.printqueue", qos: .userInitiated)
 
     private var stateListeners: [String: (ConnectionState) -> Void] = [:]
     private var scanProgressListeners: [String: (Double) -> Void] = [:]
@@ -185,34 +186,27 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
     // MARK: - Connection
 
     public func connectPrinter(host: String, port: Double, timeout: Double) throws -> Promise<NetDevice> {
-        return Promise.async { [weak self] in
-            guard let self = self else {
-                throw PrinterError.notConnected
-            }
+        self.setConnectionState(.connecting)
 
-            self.setConnectionState(.connecting)
+        let success = self.printerSDK.connectIP(host)
 
-            let success = self.printerSDK.connectIP(host)
-
-            if success {
-                let device = NetDevice(host: host, port: port, deviceName: "\(host):\(Int(port))")
-                self.currentDevice = device
-                self.connectedDeviceId = "\(host):\(Int(port))"
-                self.setConnectionState(.connected)
-                return device
-            } else {
-                self.setConnectionState(.disconnected)
-                throw PrinterError.connectionFailed
-            }
+        if success {
+            let device = NetDevice(host: host, port: port, deviceName: "\(host):\(Int(port))")
+            self.currentDevice = device
+            self.connectedDeviceId = "\(host):\(Int(port))"
+            self.setConnectionState(.connected)
+            return Promise.resolved(withResult: device)
+        } else {
+            self.setConnectionState(.disconnected)
+            throw PrinterError.connectionFailed
         }
     }
 
     public func closeConnection() throws -> Promise<Void> {
-        return Promise.async { [weak self] in
-            self?.printerSDK.disconnect()
-            self?.currentDevice = nil
-            self?.setConnectionState(.disconnected)
-        }
+        self.printerSDK.disconnect()
+        self.currentDevice = nil
+        self.setConnectionState(.disconnected)
+        return Promise.resolved(withResult: ())
     }
 
     // MARK: - Connection State
@@ -256,42 +250,33 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
     // MARK: - Print Methods
 
     public func printText(text: String, options: PrintOptions) throws -> Promise<PrintJobStatus> {
-        return Promise.async { [weak self] in
-            guard let self = self else { throw PrinterError.notInitialized }
+        let jobId = UUID().uuidString
+        var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
 
-            let jobId = UUID().uuidString
-            var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
-            self.printJobs[jobId] = job
-
-            do {
-                self.isPrintingState = true
-                job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
-                self.printJobs[jobId] = job
-
-                guard self.currentDevice != nil else {
-                    throw PrinterError.notConnected
-                }
-
-                self.printerSDK.printText(text)
-
-                if options.beep {
-                    self.printerSDK.beep()
-                }
-                if options.cut {
-                    self.printerSDK.cutPaper()
-                }
-
-                let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
-                self.printJobs[jobId] = completed
-                self.isPrintingState = false
-                return completed
-            } catch {
-                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: error.localizedDescription)
-                self.printJobs[jobId] = failed
-                self.isPrintingState = false
-                return failed
-            }
+        guard currentDevice != nil else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
         }
+
+        isPrintingState = true
+        job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+        printJobs[jobId] = job
+
+        printerSDK.printText(text)
+
+        if options.beep {
+            printerSDK.beep()
+        }
+        if options.cut {
+            printerSDK.cutPaper()
+        }
+
+        let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+        printJobs[jobId] = completed
+        isPrintingState = false
+        return Promise.resolved(withResult: completed)
     }
 
     public func printBill(text: String, options: PrintOptions) throws -> Promise<PrintJobStatus> {
@@ -305,40 +290,33 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
     }
 
     public func printRaw(data: String) throws -> Promise<PrintJobStatus> {
-        return Promise.async { [weak self] in
-            guard let self = self else { throw PrinterError.notInitialized }
+        let jobId = UUID().uuidString
+        var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
 
-            let jobId = UUID().uuidString
-            var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
-            self.printJobs[jobId] = job
-
-            do {
-                self.isPrintingState = true
-                job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
-                self.printJobs[jobId] = job
-
-                guard self.currentDevice != nil else {
-                    throw PrinterError.notConnected
-                }
-
-                guard let decodedData = Data(base64Encoded: data),
-                      let text = String(data: decodedData, encoding: .utf8) else {
-                    throw PrinterError.invalidData
-                }
-
-                self.printerSDK.printText(text)
-
-                let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
-                self.printJobs[jobId] = completed
-                self.isPrintingState = false
-                return completed
-            } catch {
-                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: error.localizedDescription)
-                self.printJobs[jobId] = failed
-                self.isPrintingState = false
-                return failed
-            }
+        guard currentDevice != nil else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
         }
+
+        guard let decodedData = Data(base64Encoded: data),
+              let text = String(data: decodedData, encoding: .utf8) else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Invalid data")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
+        }
+
+        isPrintingState = true
+        job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+        printJobs[jobId] = job
+
+        printerSDK.printText(text)
+
+        let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+        printJobs[jobId] = completed
+        isPrintingState = false
+        return Promise.resolved(withResult: completed)
     }
 
     public func printImage(imageUrl: String, options: ImagePrintOptions) throws -> Promise<PrintJobStatus> {
@@ -385,50 +363,43 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
     }
 
     public func printImageBase64(base64: String, options: ImagePrintOptions) throws -> Promise<PrintJobStatus> {
-        return Promise.async { [weak self] in
-            guard let self = self else { throw PrinterError.notInitialized }
+        let jobId = UUID().uuidString
+        var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
 
-            let jobId = UUID().uuidString
-            var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
-            self.printJobs[jobId] = job
-
-            do {
-                self.isPrintingState = true
-                job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
-                self.printJobs[jobId] = job
-
-                guard self.currentDevice != nil else {
-                    throw PrinterError.notConnected
-                }
-
-                guard let data = Data(base64Encoded: base64),
-                      let image = UIImage(data: data) else {
-                    throw PrinterError.invalidData
-                }
-
-                let processedImage = self.processImage(image, options: options)
-                let printerWidth = options.printerWidthType == .mm58 ? 384 : 576
-                self.printerSDK.setPrintWidth(printerWidth)
-                self.printerSDK.printImage(processedImage)
-
-                if options.beep {
-                    self.printerSDK.beep()
-                }
-                if options.cut {
-                    self.printerSDK.cutPaper()
-                }
-
-                let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
-                self.printJobs[jobId] = completed
-                self.isPrintingState = false
-                return completed
-            } catch {
-                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: error.localizedDescription)
-                self.printJobs[jobId] = failed
-                self.isPrintingState = false
-                return failed
-            }
+        guard currentDevice != nil else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
         }
+
+        guard let data = Data(base64Encoded: base64),
+              let image = UIImage(data: data) else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Invalid image data")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
+        }
+
+        isPrintingState = true
+        job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+        printJobs[jobId] = job
+
+        let processedImage = processImage(image, options: options)
+        let printerWidth = options.printerWidthType == .mm58 ? 384 : 576
+        printerSDK.setPrintWidth(printerWidth)
+        printerSDK.printImage(processedImage)
+
+        if options.beep {
+            printerSDK.beep()
+        }
+        if options.cut {
+            printerSDK.cutPaper()
+        }
+
+        let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+        printJobs[jobId] = completed
+        isPrintingState = false
+        return Promise.resolved(withResult: completed)
     }
 
     public func printColumnsText(
@@ -445,6 +416,78 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
             columnStyles: columnStyles
         )
         return try printText(text: columnText, options: options)
+    }
+
+    public func printBulk(items: [PrintBulkItem]) -> Promise<PrintJobStatus> {
+        let jobId = UUID().uuidString
+        var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
+
+        guard currentDevice != nil else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
+        }
+
+        isPrintingState = true
+        job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+        printJobs[jobId] = job
+
+        // Process each item in the bulk
+        for item in items {
+            switch item.type {
+            case .text:
+                if let content = item.content {
+                    printerSDK.printText(content)
+                    if let options = item.options {
+                        if options.beep { printerSDK.beep() }
+                        if options.cut { printerSDK.cutPaper() }
+                    }
+                }
+
+            case .columns:
+                if let texts = item.texts,
+                   let widths = item.columnWidths,
+                   let alignments = item.columnAlignments,
+                   let styles = item.columnStyles {
+                    let result = processColumnText(
+                        texts: texts,
+                        columnWidths: widths.map { Int($0) },
+                        columnAlignments: alignments.map { Int($0) },
+                        columnStyles: styles
+                    )
+                    printerSDK.printText(result)
+                    if let options = item.options {
+                        if options.beep { printerSDK.beep() }
+                        if options.cut { printerSDK.cutPaper() }
+                    }
+                }
+
+            case .imageBase64:
+                if let base64 = item.base64,
+                   let data = Data(base64Encoded: base64),
+                   let image = UIImage(data: data),
+                   let imageOptions = item.imageOptions {
+                    let processedImage = processImage(image, options: imageOptions)
+                    let printerWidth = imageOptions.printerWidthType == .mm58 ? 384 : 576
+                    printerSDK.setPrintWidth(printerWidth)
+                    printerSDK.printImage(processedImage)
+                    if imageOptions.beep { printerSDK.beep() }
+                    if imageOptions.cut { printerSDK.cutPaper() }
+                }
+
+            case .separator:
+                printerSDK.printText(" ------ ------ ------ ------")
+
+            @unknown default:
+                break
+            }
+        }
+
+        let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+        printJobs[jobId] = completed
+        isPrintingState = false
+        return Promise.resolved(withResult: completed)
     }
 
     private func processColumnText(
@@ -499,6 +542,151 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
         return lines.joined(separator: "\n")
     }
 
+    // MARK: - Sync Print Methods
+
+    public func printTextSync(text: String, options: PrintOptions) -> String {
+        let jobId = UUID().uuidString
+        let job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
+
+        printQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            guard self.currentDevice != nil else {
+                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+                self.printJobs[jobId] = failed
+                return
+            }
+
+            self.isPrintingState = true
+            self.printJobs[jobId] = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+
+            self.printerSDK.printText(text)
+
+            if options.beep {
+                self.printerSDK.beep()
+            }
+            if options.cut {
+                self.printerSDK.cutPaper()
+            }
+
+            let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+            self.printJobs[jobId] = completed
+            self.isPrintingState = false
+        }
+
+        return jobId  // Returns immediately!
+    }
+
+    public func printRawSync(data: String) -> String {
+        let jobId = UUID().uuidString
+        let job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
+
+        printQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            guard self.currentDevice != nil else {
+                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+                self.printJobs[jobId] = failed
+                return
+            }
+
+            guard let decodedData = Data(base64Encoded: data),
+                  let text = String(data: decodedData, encoding: .utf8) else {
+                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Invalid data")
+                self.printJobs[jobId] = failed
+                return
+            }
+
+            self.isPrintingState = true
+            self.printJobs[jobId] = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+
+            self.printerSDK.printText(text)
+
+            let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+            self.printJobs[jobId] = completed
+            self.isPrintingState = false
+        }
+
+        return jobId
+    }
+
+    public func printImageBase64Sync(base64: String, options: ImagePrintOptions) -> String {
+        let jobId = UUID().uuidString
+        let job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
+
+        printQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            guard self.currentDevice != nil else {
+                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+                self.printJobs[jobId] = failed
+                return
+            }
+
+            guard let data = Data(base64Encoded: base64),
+                  let image = UIImage(data: data) else {
+                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Invalid image data")
+                self.printJobs[jobId] = failed
+                return
+            }
+
+            self.isPrintingState = true
+            self.printJobs[jobId] = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+
+            let processedImage = self.processImage(image, options: options)
+            let printerWidth = options.printerWidthType == .mm58 ? 384 : 576
+            self.printerSDK.setPrintWidth(printerWidth)
+            self.printerSDK.printImage(processedImage)
+
+            if options.beep {
+                self.printerSDK.beep()
+            }
+            if options.cut {
+                self.printerSDK.cutPaper()
+            }
+
+            let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+            self.printJobs[jobId] = completed
+            self.isPrintingState = false
+        }
+
+        return jobId
+    }
+
+    public func printBillSync(text: String, options: PrintOptions) -> String {
+        // Bill always uses beep, cut, and tailing line
+        let billOptions = PrintOptions(
+            beep: true,
+            cut: true,
+            tailingLine: true,
+            encoding: options.encoding
+        )
+        return printTextSync(text: text, options: billOptions)
+    }
+
+    public func printColumnsTextSync(
+        texts: [String],
+        columnWidths: [Double],
+        columnAlignments: [Double],
+        columnStyles: [String],
+        options: PrintOptions
+    ) -> String {
+        let result = processColumnText(
+            texts: texts,
+            columnWidths: columnWidths.map { Int($0) },
+            columnAlignments: columnAlignments.map { Int($0) },
+            columnStyles: columnStyles
+        )
+        return printTextSync(text: result, options: options)
+    }
+
+    public func getJobStatus(jobId: String) -> PrintJobStatus? {
+        return printJobs[jobId]
+    }
+
     // MARK: - Image Caching
 
     public func cacheImage(url: String, key: String) throws -> Promise<Void> {
@@ -508,49 +696,42 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
     }
 
     public func printCachedImage(key: String, options: ImagePrintOptions) throws -> Promise<PrintJobStatus> {
-        return Promise.async { [weak self] in
-            guard let self = self else { throw PrinterError.notInitialized }
+        let jobId = UUID().uuidString
+        var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
+        printJobs[jobId] = job
 
-            guard let image = self.imageCache.get(key: key) else {
-                throw PrinterError.imageNotCached
-            }
-
-            let jobId = UUID().uuidString
-            var job = PrintJobStatus(jobId: jobId, status: .queued, error: nil)
-            self.printJobs[jobId] = job
-
-            do {
-                self.isPrintingState = true
-                job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
-                self.printJobs[jobId] = job
-
-                guard self.currentDevice != nil else {
-                    throw PrinterError.notConnected
-                }
-
-                let processedImage = self.processImage(image, options: options)
-                let printerWidth = options.printerWidthType == .mm58 ? 384 : 576
-                self.printerSDK.setPrintWidth(printerWidth)
-                self.printerSDK.printImage(processedImage)
-
-                if options.beep {
-                    self.printerSDK.beep()
-                }
-                if options.cut {
-                    self.printerSDK.cutPaper()
-                }
-
-                let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
-                self.printJobs[jobId] = completed
-                self.isPrintingState = false
-                return completed
-            } catch {
-                let failed = PrintJobStatus(jobId: jobId, status: .failed, error: error.localizedDescription)
-                self.printJobs[jobId] = failed
-                self.isPrintingState = false
-                return failed
-            }
+        guard let image = imageCache.get(key: key) else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Image not cached")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
         }
+
+        guard currentDevice != nil else {
+            let failed = PrintJobStatus(jobId: jobId, status: .failed, error: "Printer not connected")
+            printJobs[jobId] = failed
+            return Promise.resolved(withResult: failed)
+        }
+
+        isPrintingState = true
+        job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
+        printJobs[jobId] = job
+
+        let processedImage = processImage(image, options: options)
+        let printerWidth = options.printerWidthType == .mm58 ? 384 : 576
+        printerSDK.setPrintWidth(printerWidth)
+        printerSDK.printImage(processedImage)
+
+        if options.beep {
+            printerSDK.beep()
+        }
+        if options.cut {
+            printerSDK.cutPaper()
+        }
+
+        let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
+        printJobs[jobId] = completed
+        isPrintingState = false
+        return Promise.resolved(withResult: completed)
     }
 
     public func clearImageCache() throws {

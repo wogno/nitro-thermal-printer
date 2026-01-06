@@ -335,6 +335,64 @@ namespace margelo::nitro::thermalprinter {
       return __promise;
     }();
   }
+  std::string JHybridUSBPrinterSpec::printTextSync(const std::string& text, const PrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* text */, jni::alias_ref<JPrintOptions> /* options */)>("printTextSync");
+    auto __result = method(_javaPart, jni::make_jstring(text), JPrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::string JHybridUSBPrinterSpec::printBillSync(const std::string& text, const PrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* text */, jni::alias_ref<JPrintOptions> /* options */)>("printBillSync");
+    auto __result = method(_javaPart, jni::make_jstring(text), JPrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::string JHybridUSBPrinterSpec::printRawSync(const std::string& data) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* data */)>("printRawSync");
+    auto __result = method(_javaPart, jni::make_jstring(data));
+    return __result->toStdString();
+  }
+  std::string JHybridUSBPrinterSpec::printImageBase64Sync(const std::string& base64, const ImagePrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* base64 */, jni::alias_ref<JImagePrintOptions> /* options */)>("printImageBase64Sync");
+    auto __result = method(_javaPart, jni::make_jstring(base64), JImagePrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::string JHybridUSBPrinterSpec::printColumnsTextSync(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JArrayClass<jni::JString>> /* texts */, jni::alias_ref<jni::JArrayDouble> /* columnWidths */, jni::alias_ref<jni::JArrayDouble> /* columnAlignments */, jni::alias_ref<jni::JArrayClass<jni::JString>> /* columnStyles */, jni::alias_ref<JPrintOptions> /* options */)>("printColumnsTextSync");
+    auto __result = method(_javaPart, [&]() {
+      size_t __size = texts.size();
+      jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = texts[__i];
+        auto __elementJni = jni::make_jstring(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }(), [&]() {
+      size_t __size = columnWidths.size();
+      jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
+      __array->setRegion(0, __size, columnWidths.data());
+      return __array;
+    }(), [&]() {
+      size_t __size = columnAlignments.size();
+      jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
+      __array->setRegion(0, __size, columnAlignments.data());
+      return __array;
+    }(), [&]() {
+      size_t __size = columnStyles.size();
+      jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = columnStyles[__i];
+        auto __elementJni = jni::make_jstring(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }(), JPrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::optional<PrintJobStatus> JHybridUSBPrinterSpec::getJobStatus(const std::string& jobId) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPrintJobStatus>(jni::alias_ref<jni::JString> /* jobId */)>("getJobStatus");
+    auto __result = method(_javaPart, jni::make_jstring(jobId));
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
   std::shared_ptr<Promise<void>> JHybridUSBPrinterSpec::cacheImage(const std::string& url, const std::string& key) {
     static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* url */, jni::alias_ref<jni::JString> /* key */)>("cacheImage");
     auto __result = method(_javaPart, jni::make_jstring(url), jni::make_jstring(key));

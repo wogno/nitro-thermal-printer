@@ -5,6 +5,7 @@ import type {
   ImagePrintOptions,
   PrintJobStatus,
   PermissionResult,
+  PrintBulkItem,
 } from './types'
 import { ConnectionState } from './types'
 
@@ -40,7 +41,7 @@ export interface BLEPrinter
   isPrinting(): boolean
   getPrintQueue(): PrintJobStatus[]
 
-  // Print Methods
+  // Print Methods (Async - wait for completion)
   printText(text: string, options: PrintOptions): Promise<PrintJobStatus>
   printBill(text: string, options: PrintOptions): Promise<PrintJobStatus>
   printRaw(data: string): Promise<PrintJobStatus>
@@ -53,6 +54,25 @@ export interface BLEPrinter
     columnStyles: string[],
     options: PrintOptions
   ): Promise<PrintJobStatus>
+
+  // Print Methods (Sync - fire and forget, instant return)
+  printTextSync(text: string, options: PrintOptions): string  // Returns jobId
+  printBillSync(text: string, options: PrintOptions): string
+  printRawSync(data: string): string
+  printImageBase64Sync(base64: string, options: ImagePrintOptions): string
+  printColumnsTextSync(
+    texts: string[],
+    columnWidths: number[],
+    columnAlignments: number[],
+    columnStyles: string[],
+    options: PrintOptions
+  ): string
+
+  // Get job status by ID
+  getJobStatus(jobId: string): PrintJobStatus | undefined
+
+  // Bulk Print (single call for multiple items)
+  printBulk(items: PrintBulkItem[]): Promise<PrintJobStatus>
 
   // Image Caching
   cacheImage(url: string, key: string): Promise<void>

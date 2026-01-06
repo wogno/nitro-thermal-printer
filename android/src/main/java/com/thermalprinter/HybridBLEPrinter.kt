@@ -21,6 +21,8 @@ import com.margelo.nitro.com.thermalprinter.ConnectionState
 import com.margelo.nitro.com.thermalprinter.HybridBLEPrinterSpec
 import com.margelo.nitro.com.thermalprinter.ImagePrintOptions
 import com.margelo.nitro.com.thermalprinter.PermissionResult
+import com.margelo.nitro.com.thermalprinter.PrintBulkItem
+import com.margelo.nitro.com.thermalprinter.PrintBulkItemType
 import com.margelo.nitro.com.thermalprinter.PrintJobStatus
 import com.margelo.nitro.com.thermalprinter.PrintJobStatusType
 import com.margelo.nitro.com.thermalprinter.PrintOptions
@@ -346,6 +348,87 @@ class HybridBLEPrinter : HybridBLEPrinterSpec() {
             columnStyles.toList()
         )
         return printText(result, options)
+    }
+
+    override fun printBulk(items: Array<PrintBulkItem>): Promise<PrintJobStatus> = Promise.async {
+        withContext(Dispatchers.IO) {
+            val jobId = UUID.randomUUID().toString()
+            val job = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+            printJobs[jobId] = job
+
+            try {
+                isPrintingState = true
+                printJobs[jobId] = job.copy(status = PrintJobStatusType.PRINTING)
+
+                ensureConnected()
+
+                // Process each item in the bulk
+                for (item in items) {
+                    when (item.type) {
+                        PrintBulkItemType.TEXT -> {
+                            item.content?.let { content ->
+                                val data = encodeText(content, item.options ?: PrintOptions(false, false, false, "UTF-8"))
+                                writeToSocket(data)
+                            }
+                        }
+
+                        PrintBulkItemType.COLUMNS -> {
+                            item.texts?.let { texts ->
+                                item.columnWidths?.let { widths ->
+                                    item.columnAlignments?.let { alignments ->
+                                        val styles = item.columnStyles ?: arrayOf()
+                                        val result = processColumnText(
+                                            texts.toList(),
+                                            widths.map { it.toInt() },
+                                            alignments.map { it.toInt() },
+                                            styles.toList()
+                                        )
+                                        val options = item.options ?: PrintOptions(false, false, false, "UTF-8")
+                                        val data = encodeText(result, options)
+                                        writeToSocket(data)
+                                    }
+                                }
+                            }
+                        }
+
+                        PrintBulkItemType.IMAGE_BASE64 -> {
+                            item.base64?.let { base64 ->
+                                item.imageOptions?.let { imageOptions ->
+                                    val bitmap = imageProcessor.decodeBitmapFromBase64(base64)
+                                        ?: throw IllegalArgumentException("Invalid Base64 image data")
+
+                                    val escPosData = imageProcessor.bitmapToEscPos(
+                                        bitmap,
+                                        imageOptions.imageWidth.toInt(),
+                                        imageOptions.imageHeight.toInt()
+                                    )
+                                    writeToSocket(escPosData)
+
+                                    if (imageOptions.cut) writeToSocket(ESC_CUT)
+                                    if (imageOptions.beep) writeToSocket(ESC_BEEP)
+                                }
+                            }
+                        }
+
+                        PrintBulkItemType.SEPARATOR -> {
+                            val separator = " ------ ------ ------ ------\n"
+                            val data = separator.toByteArray()
+                            writeToSocket(data)
+                        }
+                    }
+                }
+
+                val completed = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+                printJobs[jobId] = completed
+                completed
+            } catch (e: Exception) {
+                val failed = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+                printJobs[jobId] = failed
+                failed
+            } finally {
+                isPrintingState = false
+            }
+        }
     }
 
     // ============ Image Caching ============

@@ -60,8 +60,8 @@ const processNewLine = (
   }
 
   return {
-    text: newText ?? "",
-    text_tail: newTextTail.trim() ?? "",
+    text: newText,
+    text_tail: newTextTail.trim(),
   };
 };
 

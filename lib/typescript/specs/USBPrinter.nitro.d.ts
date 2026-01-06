@@ -29,6 +29,12 @@ export interface USBPrinter extends HybridObject<{
     printImage(imageUrl: string, options: ImagePrintOptions): Promise<PrintJobStatus>;
     printImageBase64(base64: string, options: ImagePrintOptions): Promise<PrintJobStatus>;
     printColumnsText(texts: string[], columnWidths: number[], columnAlignments: number[], columnStyles: string[], options: PrintOptions): Promise<PrintJobStatus>;
+    printTextSync(text: string, options: PrintOptions): string;
+    printBillSync(text: string, options: PrintOptions): string;
+    printRawSync(data: string): string;
+    printImageBase64Sync(base64: string, options: ImagePrintOptions): string;
+    printColumnsTextSync(texts: string[], columnWidths: number[], columnAlignments: number[], columnStyles: string[], options: PrintOptions): string;
+    getJobStatus(jobId: string): PrintJobStatus | undefined;
     cacheImage(url: string, key: string): Promise<void>;
     printCachedImage(key: string, options: ImagePrintOptions): Promise<PrintJobStatus>;
     clearImageCache(): void;

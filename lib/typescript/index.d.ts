@@ -7,7 +7,7 @@
 import type { BLEPrinter as HybridBLEPrinter } from './specs/BLEPrinter.nitro';
 import type { NetPrinter as HybridNetPrinter } from './specs/NetPrinter.nitro';
 import type { USBPrinter as HybridUSBPrinter } from './specs/USBPrinter.nitro';
-import type { PrintJobStatus as NitroPrintJobStatus } from './specs/types';
+import type { PrintJobStatus as NitroPrintJobStatus, PrintBulkItem } from './specs/types';
 import { PrinterWidthType, ConnectionState } from './specs/types';
 export * from './specs/types';
 export type { HybridBLEPrinter, HybridNetPrinter, HybridUSBPrinter };
@@ -137,6 +137,36 @@ export declare const BLEPrinter: {
      * Request Bluetooth permissions
      */
     askPermissions(): Promise<import(".").PermissionResult>;
+    /**
+     * Print text instantly - returns jobId immediately
+     */
+    printTextSync(text: string, opts?: PrinterOptions): string;
+    /**
+     * Print bill instantly - returns jobId immediately
+     */
+    printBillSync(text: string, opts?: PrinterOptions): string;
+    /**
+     * Print columns text instantly - returns jobId immediately
+     */
+    printColumnsTextSync(texts: string[], columnWidth: number[], columnAlignment: number[], columnStyle?: string[], opts?: PrinterOptions): string;
+    /**
+     * Print raw data instantly - returns jobId immediately
+     */
+    printRawSync(data: string): string;
+    /**
+     * Print image base64 instantly - returns jobId immediately
+     */
+    printImageBase64Sync(base64: string, opts?: PrinterImageOptions): string;
+    /**
+     * Get job status by ID
+     */
+    getJobStatus(jobId: string): NitroPrintJobStatus | undefined;
+    /**
+     * Print multiple items in a single call for maximum performance
+     * @param items Array of print items (text, columns, images, separators)
+     * @returns Promise with job status
+     */
+    printBulk(items: PrintBulkItem[]): Promise<NitroPrintJobStatus>;
 };
 /**
  * Network Printer - Backward compatible API with new features
@@ -167,6 +197,12 @@ export declare const NetPrinter: {
     printCachedImage(key: string, opts?: PrinterImageOptions): Promise<NitroPrintJobStatus>;
     clearImageCache(): void;
     askPermissions(): Promise<import(".").PermissionResult>;
+    /**
+     * Print multiple items in a single call for maximum performance
+     * @param items Array of print items (text, columns, images, separators)
+     * @returns Promise with job status
+     */
+    printBulk(items: PrintBulkItem[]): Promise<NitroPrintJobStatus>;
 };
 /**
  * USB Printer - Backward compatible API with new features (Android only)

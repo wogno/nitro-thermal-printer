@@ -84,3 +84,29 @@ export enum PrinterWidthType {
 
 // Legacy alias for backward compatibility
 export type PrinterWidth = PrinterWidthType
+
+// Bulk Print Types
+export enum PrintBulkItemType {
+  TEXT = 0,
+  COLUMNS = 1,
+  IMAGE_BASE64 = 2,
+  SEPARATOR = 3
+}
+
+export interface PrintBulkItem {
+  type: PrintBulkItemType
+
+  // For text
+  content?: string
+  options?: PrintOptions
+
+  // For columns
+  texts?: string[]
+  columnWidths?: number[]
+  columnAlignments?: number[]
+  columnStyles?: string[]
+
+  // For images
+  base64?: string
+  imageOptions?: ImagePrintOptions
+}

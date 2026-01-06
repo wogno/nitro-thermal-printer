@@ -33,6 +33,13 @@ namespace margelo::nitro::thermalprinter {
       prototype.registerHybridMethod("printImage", &HybridNetPrinterSpec::printImage);
       prototype.registerHybridMethod("printImageBase64", &HybridNetPrinterSpec::printImageBase64);
       prototype.registerHybridMethod("printColumnsText", &HybridNetPrinterSpec::printColumnsText);
+      prototype.registerHybridMethod("printTextSync", &HybridNetPrinterSpec::printTextSync);
+      prototype.registerHybridMethod("printBillSync", &HybridNetPrinterSpec::printBillSync);
+      prototype.registerHybridMethod("printRawSync", &HybridNetPrinterSpec::printRawSync);
+      prototype.registerHybridMethod("printImageBase64Sync", &HybridNetPrinterSpec::printImageBase64Sync);
+      prototype.registerHybridMethod("printColumnsTextSync", &HybridNetPrinterSpec::printColumnsTextSync);
+      prototype.registerHybridMethod("getJobStatus", &HybridNetPrinterSpec::getJobStatus);
+      prototype.registerHybridMethod("printBulk", &HybridNetPrinterSpec::printBulk);
       prototype.registerHybridMethod("cacheImage", &HybridNetPrinterSpec::cacheImage);
       prototype.registerHybridMethod("printCachedImage", &HybridNetPrinterSpec::printCachedImage);
       prototype.registerHybridMethod("clearImageCache", &HybridNetPrinterSpec::clearImageCache);

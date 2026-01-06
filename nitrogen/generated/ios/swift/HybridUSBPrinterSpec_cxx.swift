@@ -458,6 +458,84 @@ open class HybridUSBPrinterSpec_cxx {
   }
   
   @inline(__always)
+  public final func printTextSync(text: std.string, options: PrintOptions) -> bridge.Result_std__string_ {
+    do {
+      let __result = try self.__implementation.printTextSync(text: String(text), options: options)
+      let __resultCpp = std.string(__result)
+      return bridge.create_Result_std__string_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__string_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func printBillSync(text: std.string, options: PrintOptions) -> bridge.Result_std__string_ {
+    do {
+      let __result = try self.__implementation.printBillSync(text: String(text), options: options)
+      let __resultCpp = std.string(__result)
+      return bridge.create_Result_std__string_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__string_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func printRawSync(data: std.string) -> bridge.Result_std__string_ {
+    do {
+      let __result = try self.__implementation.printRawSync(data: String(data))
+      let __resultCpp = std.string(__result)
+      return bridge.create_Result_std__string_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__string_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func printImageBase64Sync(base64: std.string, options: ImagePrintOptions) -> bridge.Result_std__string_ {
+    do {
+      let __result = try self.__implementation.printImageBase64Sync(base64: String(base64), options: options)
+      let __resultCpp = std.string(__result)
+      return bridge.create_Result_std__string_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__string_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func printColumnsTextSync(texts: bridge.std__vector_std__string_, columnWidths: bridge.std__vector_double_, columnAlignments: bridge.std__vector_double_, columnStyles: bridge.std__vector_std__string_, options: PrintOptions) -> bridge.Result_std__string_ {
+    do {
+      let __result = try self.__implementation.printColumnsTextSync(texts: texts.map({ __item in String(__item) }), columnWidths: columnWidths.map({ __item in __item }), columnAlignments: columnAlignments.map({ __item in __item }), columnStyles: columnStyles.map({ __item in String(__item) }), options: options)
+      let __resultCpp = std.string(__result)
+      return bridge.create_Result_std__string_(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__string_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getJobStatus(jobId: std.string) -> bridge.Result_std__optional_PrintJobStatus__ {
+    do {
+      let __result = try self.__implementation.getJobStatus(jobId: String(jobId))
+      let __resultCpp = { () -> bridge.std__optional_PrintJobStatus_ in
+        if let __unwrappedValue = __result {
+          return bridge.create_std__optional_PrintJobStatus_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+      return bridge.create_Result_std__optional_PrintJobStatus__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__optional_PrintJobStatus__(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
   public final func cacheImage(url: std.string, key: std.string) -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {
       let __result = try self.__implementation.cacheImage(url: String(url), key: String(key))

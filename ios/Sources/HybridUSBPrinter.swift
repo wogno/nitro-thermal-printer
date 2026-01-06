@@ -146,6 +146,44 @@ public class HybridUSBPrinter: HybridUSBPrinterSpec {
         }
     }
 
+    // MARK: - Sync Print Methods (Stubs - USB not supported on iOS)
+
+    public func printTextSync(text: String, options: PrintOptions) -> String {
+        // Return empty jobId - USB not supported
+        return ""
+    }
+
+    public func printBillSync(text: String, options: PrintOptions) -> String {
+        // Return empty jobId - USB not supported
+        return ""
+    }
+
+    public func printRawSync(data: String) -> String {
+        // Return empty jobId - USB not supported
+        return ""
+    }
+
+    public func printImageBase64Sync(base64: String, options: ImagePrintOptions) -> String {
+        // Return empty jobId - USB not supported
+        return ""
+    }
+
+    public func printColumnsTextSync(
+        texts: [String],
+        columnWidths: [Double],
+        columnAlignments: [Double],
+        columnStyles: [String],
+        options: PrintOptions
+    ) -> String {
+        // Return empty jobId - USB not supported
+        return ""
+    }
+
+    public func getJobStatus(jobId: String) -> PrintJobStatus? {
+        // Return nil - USB not supported
+        return nil
+    }
+
     // MARK: - Image Caching
 
     public func cacheImage(url: String, key: String) throws -> Promise<Void> {

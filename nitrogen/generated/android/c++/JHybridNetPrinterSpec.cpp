@@ -23,6 +23,10 @@ namespace margelo::nitro::thermalprinter { struct PrintOptions; }
 namespace margelo::nitro::thermalprinter { struct ImagePrintOptions; }
 // Forward declaration of `PrinterWidthType` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { enum class PrinterWidthType; }
+// Forward declaration of `PrintBulkItem` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct PrintBulkItem; }
+// Forward declaration of `PrintBulkItemType` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { enum class PrintBulkItemType; }
 
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
@@ -50,6 +54,10 @@ namespace margelo::nitro::thermalprinter { enum class PrinterWidthType; }
 #include "JImagePrintOptions.hpp"
 #include "PrinterWidthType.hpp"
 #include "JPrinterWidthType.hpp"
+#include "PrintBulkItem.hpp"
+#include "JPrintBulkItem.hpp"
+#include "PrintBulkItemType.hpp"
+#include "JPrintBulkItemType.hpp"
 
 namespace margelo::nitro::thermalprinter {
 
@@ -337,6 +345,89 @@ namespace margelo::nitro::thermalprinter {
       }
       return __array;
     }(), JPrintOptions::fromCpp(options));
+    return [&]() {
+      auto __promise = Promise<PrintJobStatus>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<JPrintJobStatus>(__boxedResult);
+        __promise->resolve(__result->toCpp());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::string JHybridNetPrinterSpec::printTextSync(const std::string& text, const PrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* text */, jni::alias_ref<JPrintOptions> /* options */)>("printTextSync");
+    auto __result = method(_javaPart, jni::make_jstring(text), JPrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::string JHybridNetPrinterSpec::printBillSync(const std::string& text, const PrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* text */, jni::alias_ref<JPrintOptions> /* options */)>("printBillSync");
+    auto __result = method(_javaPart, jni::make_jstring(text), JPrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::string JHybridNetPrinterSpec::printRawSync(const std::string& data) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* data */)>("printRawSync");
+    auto __result = method(_javaPart, jni::make_jstring(data));
+    return __result->toStdString();
+  }
+  std::string JHybridNetPrinterSpec::printImageBase64Sync(const std::string& base64, const ImagePrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JString> /* base64 */, jni::alias_ref<JImagePrintOptions> /* options */)>("printImageBase64Sync");
+    auto __result = method(_javaPart, jni::make_jstring(base64), JImagePrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::string JHybridNetPrinterSpec::printColumnsTextSync(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JString>(jni::alias_ref<jni::JArrayClass<jni::JString>> /* texts */, jni::alias_ref<jni::JArrayDouble> /* columnWidths */, jni::alias_ref<jni::JArrayDouble> /* columnAlignments */, jni::alias_ref<jni::JArrayClass<jni::JString>> /* columnStyles */, jni::alias_ref<JPrintOptions> /* options */)>("printColumnsTextSync");
+    auto __result = method(_javaPart, [&]() {
+      size_t __size = texts.size();
+      jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = texts[__i];
+        auto __elementJni = jni::make_jstring(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }(), [&]() {
+      size_t __size = columnWidths.size();
+      jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
+      __array->setRegion(0, __size, columnWidths.data());
+      return __array;
+    }(), [&]() {
+      size_t __size = columnAlignments.size();
+      jni::local_ref<jni::JArrayDouble> __array = jni::JArrayDouble::newArray(__size);
+      __array->setRegion(0, __size, columnAlignments.data());
+      return __array;
+    }(), [&]() {
+      size_t __size = columnStyles.size();
+      jni::local_ref<jni::JArrayClass<jni::JString>> __array = jni::JArrayClass<jni::JString>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = columnStyles[__i];
+        auto __elementJni = jni::make_jstring(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }(), JPrintOptions::fromCpp(options));
+    return __result->toStdString();
+  }
+  std::optional<PrintJobStatus> JHybridNetPrinterSpec::getJobStatus(const std::string& jobId) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPrintJobStatus>(jni::alias_ref<jni::JString> /* jobId */)>("getJobStatus");
+    auto __result = method(_javaPart, jni::make_jstring(jobId));
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  std::shared_ptr<Promise<PrintJobStatus>> JHybridNetPrinterSpec::printBulk(const std::vector<PrintBulkItem>& items) {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JArrayClass<JPrintBulkItem>> /* items */)>("printBulk");
+    auto __result = method(_javaPart, [&]() {
+      size_t __size = items.size();
+      jni::local_ref<jni::JArrayClass<JPrintBulkItem>> __array = jni::JArrayClass<JPrintBulkItem>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = items[__i];
+        auto __elementJni = JPrintBulkItem::fromCpp(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }());
     return [&]() {
       auto __promise = Promise<PrintJobStatus>::create();
       __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {

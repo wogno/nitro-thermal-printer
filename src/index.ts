@@ -14,6 +14,7 @@ import type {
   ImagePrintOptions as NitroImagePrintOptions,
   PrintJobStatus as NitroPrintJobStatus,
   USBDevice as NitroUSBDevice,
+  PrintBulkItem,
 } from './specs/types';
 import { PrinterWidthType, ConnectionState } from './specs/types';
 
@@ -300,6 +301,148 @@ export const BLEPrinter = {
   async askPermissions() {
     return getBLEPrinter().askPermissions();
   },
+
+  // ============ SYNC METHODS (Instant - Fire & Forget) ============
+  /**
+   * Print text instantly - returns jobId immediately
+   */
+  printTextSync(text: string, opts: PrinterOptions = {}): string {
+    return getBLEPrinter().printTextSync(text, toNitroPrintOptions(opts));
+  },
+
+  /**
+   * Print bill instantly - returns jobId immediately
+   */
+  printBillSync(text: string, opts: PrinterOptions = {}): string {
+    return getBLEPrinter().printBillSync(text, toNitroPrintOptions(opts));
+  },
+
+  /**
+   * Print columns text instantly - returns jobId immediately
+   */
+  printColumnsTextSync(
+    texts: string[],
+    columnWidth: number[],
+    columnAlignment: number[],
+    columnStyle: string[] = [],
+    opts: PrinterOptions = {}
+  ): string {
+    return getBLEPrinter().printColumnsTextSync(
+      texts,
+      columnWidth,
+      columnAlignment,
+      columnStyle,
+      toNitroPrintOptions(opts)
+    );
+  },
+
+  /**
+   * Print raw data instantly - returns jobId immediately
+   */
+  printRawSync(data: string): string {
+    return getBLEPrinter().printRawSync(data);
+  },
+
+  /**
+   * Print image base64 instantly - returns jobId immediately
+   */
+  printImageBase64Sync(base64: string, opts: PrinterImageOptions = {}): string {
+    return getBLEPrinter().printImageBase64Sync(base64, toNitroImageOptions(opts));
+  },
+
+  /**
+   * Get job status by ID
+   */
+  getJobStatus(jobId: string): NitroPrintJobStatus | undefined {
+    return getBLEPrinter().getJobStatus(jobId) ?? undefined;
+  },
+
+  // ============ BULK PRINT (Optimized - Single Call) ============
+  /**
+   * Print multiple items in a single call for maximum performance
+   * @param items Array of print items (text, columns, images, separators)
+   * @returns Promise with job status
+   */
+  async printBulk(items: PrintBulkItem[]): Promise<NitroPrintJobStatus> {
+    try {
+      // Validate and log items before passing to native
+      console.log('[BLEPrinter.printBulk] ========== START ==========');
+      console.log('[BLEPrinter.printBulk] Called with', items.length, 'items');
+      
+      // Validate each item
+      const validatedItems: PrintBulkItem[] = [];
+      items.forEach((item, index) => {
+        console.log(`[BLEPrinter.printBulk] Item ${index + 1}:`, {
+          type: item.type,
+          typeValue: typeof item.type === 'number' ? item.type : 'INVALID',
+          hasContent: item.content !== undefined && item.content !== null,
+          hasOptions: item.options !== undefined && item.options !== null,
+          hasTexts: item.texts !== undefined && item.texts !== null,
+          textsLength: item.texts?.length ?? 0,
+          hasColumnWidths: item.columnWidths !== undefined && item.columnWidths !== null,
+          columnWidthsLength: item.columnWidths?.length ?? 0,
+          hasColumnAlignments: item.columnAlignments !== undefined && item.columnAlignments !== null,
+          columnAlignmentsLength: item.columnAlignments?.length ?? 0,
+          hasColumnStyles: item.columnStyles !== undefined && item.columnStyles !== null,
+          columnStylesLength: item.columnStyles?.length ?? 0,
+          hasBase64: item.base64 !== undefined && item.base64 !== null,
+          hasImageOptions: item.imageOptions !== undefined && item.imageOptions !== null,
+        });
+        
+        // Validate type is a number
+        if (typeof item.type !== 'number') {
+          console.error(`[BLEPrinter.printBulk] ❌ Item ${index + 1} has invalid type:`, item.type);
+          throw new Error(`Invalid PrintBulkItemType: expected number, got ${typeof item.type}`);
+        }
+        
+        // Create clean item without undefined values
+        const cleanItem: any = { type: item.type };
+        if (item.content !== undefined && item.content !== null) cleanItem.content = item.content;
+        
+        // PrintOptions requires all fields (beep, cut, tailingLine, encoding)
+        if (item.options !== undefined && item.options !== null) {
+          cleanItem.options = {
+            beep: item.options.beep ?? false,
+            cut: item.options.cut ?? false,
+            tailingLine: item.options.tailingLine ?? false,
+            encoding: item.options.encoding ?? 'UTF-8',
+          };
+        }
+        
+        if (item.texts !== undefined && item.texts !== null) cleanItem.texts = item.texts;
+        if (item.columnWidths !== undefined && item.columnWidths !== null) cleanItem.columnWidths = item.columnWidths;
+        if (item.columnAlignments !== undefined && item.columnAlignments !== null) cleanItem.columnAlignments = item.columnAlignments;
+        if (item.columnStyles !== undefined && item.columnStyles !== null) cleanItem.columnStyles = item.columnStyles;
+        if (item.base64 !== undefined && item.base64 !== null) cleanItem.base64 = item.base64;
+        
+        // ImagePrintOptions requires all fields
+        if (item.imageOptions !== undefined && item.imageOptions !== null) {
+          cleanItem.imageOptions = {
+            beep: item.imageOptions.beep ?? false,
+            cut: item.imageOptions.cut ?? false,
+            tailingLine: item.imageOptions.tailingLine ?? false,
+            encoding: item.imageOptions.encoding ?? 'UTF-8',
+            imageWidth: item.imageOptions.imageWidth ?? 0,
+            imageHeight: item.imageOptions.imageHeight ?? 0,
+            printerWidthType: item.imageOptions.printerWidthType ?? 80,
+            paddingX: item.imageOptions.paddingX ?? 0,
+          };
+        }
+        
+        validatedItems.push(cleanItem);
+      });
+      
+      console.log('[BLEPrinter.printBulk] Calling native printBulk with', validatedItems.length, 'validated items');
+      const result = await getBLEPrinter().printBulk(validatedItems);
+      console.log('[BLEPrinter.printBulk] Native call completed:', result);
+      console.log('[BLEPrinter.printBulk] ========== END ==========');
+      return result;
+    } catch (error) {
+      console.error('[BLEPrinter.printBulk] ❌ ERROR:', error);
+      console.error('[BLEPrinter.printBulk] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      throw error;
+    }
+  },
 };
 
 // ============ Network Printer API ============
@@ -431,6 +574,16 @@ export const NetPrinter = {
   // Permissions
   async askPermissions() {
     return getNetPrinter().askPermissions();
+  },
+
+  // ============ BULK PRINT (Optimized - Single Call) ============
+  /**
+   * Print multiple items in a single call for maximum performance
+   * @param items Array of print items (text, columns, images, separators)
+   * @returns Promise with job status
+   */
+  async printBulk(items: PrintBulkItem[]): Promise<NitroPrintJobStatus> {
+    return getNetPrinter().printBulk(items);
   },
 };
 

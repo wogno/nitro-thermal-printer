@@ -26,6 +26,10 @@ namespace margelo::nitro::thermalprinter { struct PrintOptions; }
 namespace margelo::nitro::thermalprinter { struct ImagePrintOptions; }
 // Forward declaration of `PrinterWidthType` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { enum class PrinterWidthType; }
+// Forward declaration of `PrintBulkItem` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct PrintBulkItem; }
+// Forward declaration of `PrintBulkItemType` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { enum class PrintBulkItemType; }
 // Forward declaration of `PermissionResult` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct PermissionResult; }
 
@@ -41,6 +45,8 @@ namespace margelo::nitro::thermalprinter { struct PermissionResult; }
 #include "PrintOptions.hpp"
 #include "ImagePrintOptions.hpp"
 #include "PrinterWidthType.hpp"
+#include "PrintBulkItem.hpp"
+#include "PrintBulkItemType.hpp"
 #include "PermissionResult.hpp"
 
 #include "NitroThermalPrinter-Swift-Cxx-Umbrella.hpp"
@@ -229,6 +235,62 @@ namespace margelo::nitro::thermalprinter {
     }
     inline std::shared_ptr<Promise<PrintJobStatus>> printColumnsText(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) override {
       auto __result = _swiftPart.printColumnsText(texts, columnWidths, columnAlignments, columnStyles, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printTextSync(const std::string& text, const PrintOptions& options) override {
+      auto __result = _swiftPart.printTextSync(text, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printBillSync(const std::string& text, const PrintOptions& options) override {
+      auto __result = _swiftPart.printBillSync(text, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printRawSync(const std::string& data) override {
+      auto __result = _swiftPart.printRawSync(data);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printImageBase64Sync(const std::string& base64, const ImagePrintOptions& options) override {
+      auto __result = _swiftPart.printImageBase64Sync(base64, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printColumnsTextSync(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) override {
+      auto __result = _swiftPart.printColumnsTextSync(texts, columnWidths, columnAlignments, columnStyles, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<PrintJobStatus> getJobStatus(const std::string& jobId) override {
+      auto __result = _swiftPart.getJobStatus(jobId);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::shared_ptr<Promise<PrintJobStatus>> printBulk(const std::vector<PrintBulkItem>& items) override {
+      auto __result = _swiftPart.printBulk(items);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

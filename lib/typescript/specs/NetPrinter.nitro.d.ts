@@ -1,5 +1,5 @@
 import type { HybridObject } from 'react-native-nitro-modules';
-import type { NetDevice, PrintOptions, ImagePrintOptions, PrintJobStatus, PermissionResult } from './types';
+import type { NetDevice, PrintOptions, ImagePrintOptions, PrintJobStatus, PermissionResult, PrintBulkItem } from './types';
 import { ConnectionState } from './types';
 /**
  * HybridNetPrinter - Network (TCP/IP) Printer Interface
@@ -27,6 +27,13 @@ export interface NetPrinter extends HybridObject<{
     printImage(imageUrl: string, options: ImagePrintOptions): Promise<PrintJobStatus>;
     printImageBase64(base64: string, options: ImagePrintOptions): Promise<PrintJobStatus>;
     printColumnsText(texts: string[], columnWidths: number[], columnAlignments: number[], columnStyles: string[], options: PrintOptions): Promise<PrintJobStatus>;
+    printTextSync(text: string, options: PrintOptions): string;
+    printBillSync(text: string, options: PrintOptions): string;
+    printRawSync(data: string): string;
+    printImageBase64Sync(base64: string, options: ImagePrintOptions): string;
+    printColumnsTextSync(texts: string[], columnWidths: number[], columnAlignments: number[], columnStyles: string[], options: PrintOptions): string;
+    getJobStatus(jobId: string): PrintJobStatus | undefined;
+    printBulk(items: PrintBulkItem[]): Promise<PrintJobStatus>;
     cacheImage(url: string, key: string): Promise<void>;
     printCachedImage(key: string, options: ImagePrintOptions): Promise<PrintJobStatus>;
     clearImageCache(): void;

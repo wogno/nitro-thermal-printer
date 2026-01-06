@@ -23,6 +23,8 @@ namespace margelo::nitro::thermalprinter { struct PrintJobStatus; }
 namespace margelo::nitro::thermalprinter { struct PrintOptions; }
 // Forward declaration of `ImagePrintOptions` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct ImagePrintOptions; }
+// Forward declaration of `PrintBulkItem` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct PrintBulkItem; }
 // Forward declaration of `PermissionResult` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct PermissionResult; }
 
@@ -36,6 +38,7 @@ namespace margelo::nitro::thermalprinter { struct PermissionResult; }
 #include "PrintJobStatus.hpp"
 #include "PrintOptions.hpp"
 #include "ImagePrintOptions.hpp"
+#include "PrintBulkItem.hpp"
 #include "PermissionResult.hpp"
 
 namespace margelo::nitro::thermalprinter {
@@ -88,6 +91,13 @@ namespace margelo::nitro::thermalprinter {
       virtual std::shared_ptr<Promise<PrintJobStatus>> printImage(const std::string& imageUrl, const ImagePrintOptions& options) = 0;
       virtual std::shared_ptr<Promise<PrintJobStatus>> printImageBase64(const std::string& base64, const ImagePrintOptions& options) = 0;
       virtual std::shared_ptr<Promise<PrintJobStatus>> printColumnsText(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) = 0;
+      virtual std::string printTextSync(const std::string& text, const PrintOptions& options) = 0;
+      virtual std::string printBillSync(const std::string& text, const PrintOptions& options) = 0;
+      virtual std::string printRawSync(const std::string& data) = 0;
+      virtual std::string printImageBase64Sync(const std::string& base64, const ImagePrintOptions& options) = 0;
+      virtual std::string printColumnsTextSync(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) = 0;
+      virtual std::optional<PrintJobStatus> getJobStatus(const std::string& jobId) = 0;
+      virtual std::shared_ptr<Promise<PrintJobStatus>> printBulk(const std::vector<PrintBulkItem>& items) = 0;
       virtual std::shared_ptr<Promise<void>> cacheImage(const std::string& url, const std::string& key) = 0;
       virtual std::shared_ptr<Promise<PrintJobStatus>> printCachedImage(const std::string& key, const ImagePrintOptions& options) = 0;
       virtual void clearImageCache() = 0;

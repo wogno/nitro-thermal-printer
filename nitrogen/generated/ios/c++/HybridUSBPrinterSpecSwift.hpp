@@ -241,6 +241,54 @@ namespace margelo::nitro::thermalprinter {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline std::string printTextSync(const std::string& text, const PrintOptions& options) override {
+      auto __result = _swiftPart.printTextSync(text, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printBillSync(const std::string& text, const PrintOptions& options) override {
+      auto __result = _swiftPart.printBillSync(text, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printRawSync(const std::string& data) override {
+      auto __result = _swiftPart.printRawSync(data);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printImageBase64Sync(const std::string& base64, const ImagePrintOptions& options) override {
+      auto __result = _swiftPart.printImageBase64Sync(base64, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::string printColumnsTextSync(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) override {
+      auto __result = _swiftPart.printColumnsTextSync(texts, columnWidths, columnAlignments, columnStyles, std::forward<decltype(options)>(options));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::optional<PrintJobStatus> getJobStatus(const std::string& jobId) override {
+      auto __result = _swiftPart.getJobStatus(jobId);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
     inline std::shared_ptr<Promise<void>> cacheImage(const std::string& url, const std::string& key) override {
       auto __result = _swiftPart.cacheImage(url, key);
       if (__result.hasError()) [[unlikely]] {

@@ -24,6 +24,10 @@ namespace margelo::nitro::thermalprinter { struct ImagePrintOptions; }
 namespace margelo::nitro::thermalprinter { struct NetDevice; }
 // Forward declaration of `PermissionResult` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { struct PermissionResult; }
+// Forward declaration of `PrintBulkItemType` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { enum class PrintBulkItemType; }
+// Forward declaration of `PrintBulkItem` to properly resolve imports.
+namespace margelo::nitro::thermalprinter { struct PrintBulkItem; }
 // Forward declaration of `PrintJobStatusType` to properly resolve imports.
 namespace margelo::nitro::thermalprinter { enum class PrintJobStatusType; }
 // Forward declaration of `PrintJobStatus` to properly resolve imports.
@@ -44,6 +48,8 @@ namespace margelo::nitro::thermalprinter { struct USBDevice; }
 #include "ImagePrintOptions.hpp"
 #include "NetDevice.hpp"
 #include "PermissionResult.hpp"
+#include "PrintBulkItem.hpp"
+#include "PrintBulkItemType.hpp"
 #include "PrintJobStatus.hpp"
 #include "PrintJobStatusType.hpp"
 #include "PrintOptions.hpp"

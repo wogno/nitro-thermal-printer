@@ -63,4 +63,21 @@ export declare enum PrinterWidthType {
     MM_80 = 80
 }
 export type PrinterWidth = PrinterWidthType;
+export declare enum PrintBulkItemType {
+    TEXT = 0,
+    COLUMNS = 1,
+    IMAGE_BASE64 = 2,
+    SEPARATOR = 3
+}
+export interface PrintBulkItem {
+    type: PrintBulkItemType;
+    content?: string;
+    options?: PrintOptions;
+    texts?: string[];
+    columnWidths?: number[];
+    columnAlignments?: number[];
+    columnStyles?: string[];
+    base64?: string;
+    imageOptions?: ImagePrintOptions;
+}
 //# sourceMappingURL=types.d.ts.map

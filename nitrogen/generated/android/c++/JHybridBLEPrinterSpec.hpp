@@ -73,6 +73,13 @@ namespace margelo::nitro::thermalprinter {
     std::shared_ptr<Promise<PrintJobStatus>> printImage(const std::string& imageUrl, const ImagePrintOptions& options) override;
     std::shared_ptr<Promise<PrintJobStatus>> printImageBase64(const std::string& base64, const ImagePrintOptions& options) override;
     std::shared_ptr<Promise<PrintJobStatus>> printColumnsText(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) override;
+    std::string printTextSync(const std::string& text, const PrintOptions& options) override;
+    std::string printBillSync(const std::string& text, const PrintOptions& options) override;
+    std::string printRawSync(const std::string& data) override;
+    std::string printImageBase64Sync(const std::string& base64, const ImagePrintOptions& options) override;
+    std::string printColumnsTextSync(const std::vector<std::string>& texts, const std::vector<double>& columnWidths, const std::vector<double>& columnAlignments, const std::vector<std::string>& columnStyles, const PrintOptions& options) override;
+    std::optional<PrintJobStatus> getJobStatus(const std::string& jobId) override;
+    std::shared_ptr<Promise<PrintJobStatus>> printBulk(const std::vector<PrintBulkItem>& items) override;
     std::shared_ptr<Promise<void>> cacheImage(const std::string& url, const std::string& key) override;
     std::shared_ptr<Promise<PrintJobStatus>> printCachedImage(const std::string& key, const ImagePrintOptions& options) override;
     void clearImageCache() override;
