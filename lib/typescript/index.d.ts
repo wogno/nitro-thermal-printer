@@ -13,6 +13,14 @@ export * from './specs/types';
 export type { HybridBLEPrinter, HybridNetPrinter, HybridUSBPrinter };
 export { COMMANDS } from './utils/printer-commands';
 export { processColumnText } from './utils/print-column';
+/**
+ * Normalize a PrintBulkItem to ensure all required fields are present for JSI bridge.
+ * This is automatically called by printBulk(), but you can use it manually if needed.
+ *
+ * @param item The PrintBulkItem to normalize
+ * @returns A normalized PrintBulkItem with all required fields
+ */
+export declare function normalizePrintBulkItem(item: PrintBulkItem): any;
 export interface PrinterOptions {
     beep?: boolean;
     cut?: boolean;

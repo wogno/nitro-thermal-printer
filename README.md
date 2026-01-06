@@ -196,18 +196,50 @@ onDeviceDetached(callback: () => void): () => void
 
 ```typescript
 interface PrinterOptions {
-  beep?: boolean;      // Beep after print
-  cut?: boolean;       // Cut paper after print
-  tailingLine?: boolean; // Add trailing lines
+  beep?: boolean;      // Beep after print (default: false)
+  cut?: boolean;       // Cut paper after print (default: false)
+  tailingLine?: boolean; // Add trailing lines (default: false)
   encoding?: string;   // Text encoding (default: UTF-8)
 }
 
 interface PrinterImageOptions extends PrinterOptions {
-  imageWidth?: number;
-  imageHeight?: number;
-  printerWidthType?: 58 | 80; // Printer width in mm
-  paddingX?: number;
+  imageWidth?: number;  // Image width (default: 0)
+  imageHeight?: number; // Image height (default: 0)
+  printerWidthType?: 58 | 80; // Printer width in mm (default: 80)
+  paddingX?: number;    // Horizontal padding (default: 0)
 }
+```
+
+## Bulk Print
+
+The `printBulk()` method automatically normalizes all items to ensure JSI bridge compatibility. You don't need to manually normalize items - just pass them as-is:
+
+```typescript
+await BLEPrinter.printBulk([
+  {
+    type: PrintBulkItemType.TEXT,
+    content: "Hello",
+    options: { cut: true, beep: true } // Missing fields are auto-filled with defaults
+  },
+  {
+    type: PrintBulkItemType.COLUMNS,
+    texts: ["Item", "Price"],
+    columnWidths: [10, 20],
+    columnAlignments: [ColumnAlignment.LEFT, ColumnAlignment.RIGHT]
+    // columnStyles is optional
+  }
+]);
+```
+
+**Note:** The package automatically:
+- Completes missing `PrintOptions` fields with defaults
+- Completes missing `ImagePrintOptions` fields with defaults
+- Omits `undefined`/`null` values for better JSI compatibility
+- Validates item types
+
+If you need manual normalization, you can import `normalizePrintBulkItem`:
+```typescript
+import { normalizePrintBulkItem } from 'react-native-thermal-receipt-printer-image-qr';
 ```
 
 ## Styling with ESC/POS Commands
