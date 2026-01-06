@@ -247,6 +247,35 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
         return Array(printJobs.values)
     }
 
+    // MARK: - Raw Print Helpers
+    
+    /// Convert a string to hex representation
+    private func stringToHex(_ string: String) -> String {
+        return string.data(using: .utf8)?.map { String(format: "%02x", $0) }.joined() ?? ""
+    }
+    
+    /// Print text using raw sendHex to bypass PrinterSDK's text formatting
+    /// This gives us full control over ESC/POS commands including line spacing
+    private func printTextRaw(_ text: String) {
+        // ESC @ - Initialize printer
+        let initCommand = "1b40"
+        
+        // ESC 3 n - Set line spacing to n dots (24 = 0x18 for comfortable spacing)
+        let lineSpacingCommand = "1b3318"
+        
+        // Send init and line spacing
+        printerSDK.sendHex(initCommand)
+        printerSDK.sendHex(lineSpacingCommand)
+        
+        // Convert text to hex and send
+        let textHex = stringToHex(text)
+        printerSDK.sendHex(textHex)
+        
+        // Line feed at end
+        let lineFeedHex = "0a" // \n
+        printerSDK.sendHex(lineFeedHex)
+    }
+    
     // MARK: - Print Methods
 
     public func printText(text: String, options: PrintOptions) throws -> Promise<PrintJobStatus> {
@@ -264,7 +293,8 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
         job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
         printJobs[jobId] = job
 
-        printerSDK.printText(text)
+        // Use raw sendHex to bypass PrinterSDK's text formatting
+        printTextRaw(text)
 
         if options.beep {
             printerSDK.beep()
@@ -311,7 +341,8 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
         job = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
         printJobs[jobId] = job
 
-        printerSDK.printText(text)
+        // Use raw sendHex to bypass PrinterSDK's text formatting
+        printTextRaw(text)
 
         let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
         printJobs[jobId] = completed
@@ -438,7 +469,8 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
             switch item.type {
             case .text:
                 if let content = item.content {
-                    printerSDK.printText(content)
+                    // Use raw sendHex to bypass PrinterSDK's text formatting
+                    printTextRaw(content)
                     if let options = item.options {
                         if options.beep { printerSDK.beep() }
                         if options.cut { printerSDK.cutPaper() }
@@ -456,7 +488,8 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
                         columnAlignments: alignments.map { Int($0) },
                         columnStyles: styles
                     )
-                    printerSDK.printText(result)
+                    // Use raw sendHex to bypass PrinterSDK's text formatting
+                    printTextRaw(result)
                     if let options = item.options {
                         if options.beep { printerSDK.beep() }
                         if options.cut { printerSDK.cutPaper() }
@@ -477,7 +510,7 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
                 }
 
             case .separator:
-                printerSDK.printText(" ------ ------ ------ ------")
+                printTextRaw(" ------ ------ ------ ------")
 
             @unknown default:
                 break
@@ -539,6 +572,7 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
             lines.append(lineBuilder)
         }
 
+        // Join lines - printTextRaw will handle line spacing
         return lines.joined(separator: "\n")
     }
 
@@ -561,7 +595,8 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
             self.isPrintingState = true
             self.printJobs[jobId] = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
 
-            self.printerSDK.printText(text)
+            // Use raw sendHex to bypass PrinterSDK's text formatting
+            self.printTextRaw(text)
 
             if options.beep {
                 self.printerSDK.beep()
@@ -602,7 +637,8 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
             self.isPrintingState = true
             self.printJobs[jobId] = PrintJobStatus(jobId: jobId, status: .printing, error: nil)
 
-            self.printerSDK.printText(text)
+            // Use raw sendHex to bypass PrinterSDK's text formatting
+            self.printTextRaw(text)
 
             let completed = PrintJobStatus(jobId: jobId, status: .completed, error: nil)
             self.printJobs[jobId] = completed
@@ -763,12 +799,16 @@ public class HybridNetPrinter: HybridNetPrinterSpec {
         // Determine printer width in pixels (576 for 80mm, 384 for 58mm)
         let printerWidth = options.printerWidthType == .mm58 ? 384.0 : 576.0
 
-        // Calculate target width - use imageWidth if specified, otherwise fit to printer width
+        // Calculate target width - use imageWidth if specified, otherwise use 90% of printer width
         var targetWidth = CGFloat(options.imageWidth)
         if targetWidth <= 0 {
-            // Default: fit image to printer width minus padding
-            let padding = CGFloat(options.paddingX)
-            targetWidth = CGFloat(printerWidth) - padding
+            // Default: use 90% of printer width for larger images
+            targetWidth = CGFloat(printerWidth) * 0.9
+        } else if targetWidth < 100 {
+            // If width is small (< 100px), treat it as percentage of printer width
+            // e.g., 38 = 38% of printer width, 40 = 40% of printer width
+            let percentage = targetWidth / 100.0
+            targetWidth = CGFloat(printerWidth) * percentage
         }
 
         // Limit to printer width
