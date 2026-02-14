@@ -11,17 +11,17 @@ find_package(react-native-nitro-modules REQUIRED CONFIG)
 
 # Get nitrogen generated sources - Android C++
 file(GLOB_RECURSE NITROGEN_ANDROID_SOURCES
-    "${CMAKE_SOURCE_DIR}/../../../../../nitrogen/generated/android/c++/*.cpp"
+    "${CMAKE_SOURCE_DIR}/../../../../nitrogen/generated/android/c++/*.cpp"
 )
 
 # Get nitrogen generated sources - Shared C++
 file(GLOB_RECURSE NITROGEN_SHARED_SOURCES
-    "${CMAKE_SOURCE_DIR}/../../../../../nitrogen/generated/shared/c++/*.cpp"
+    "${CMAKE_SOURCE_DIR}/../../../../nitrogen/generated/shared/c++/*.cpp"
 )
 
 # Include directories for nitrogen headers
-set(NITROGEN_ANDROID_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../../../../../nitrogen/generated/android/c++")
-set(NITROGEN_SHARED_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../../../../../nitrogen/generated/shared/c++")
+set(NITROGEN_ANDROID_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../../../../nitrogen/generated/android/c++")
+set(NITROGEN_SHARED_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../../../../nitrogen/generated/shared/c++")
 
 # Create shared library
 add_library(${CMAKE_PROJECT_NAME} SHARED
@@ -39,10 +39,18 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Link libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ReactAndroid::jsi
-    ReactAndroid::react_nativemodule_core
-    ReactAndroid::turbomodulejsijni
     fbjni::fbjni
     react-native-nitro-modules::NitroModules
     android
     log
 )
+
+# RN 0.76+ merged react_nativemodule_core and turbomodulejsijni into reactnative
+if(ReactAndroid_VERSION_MINOR GREATER_EQUAL 76)
+    target_link_libraries(${CMAKE_PROJECT_NAME} ReactAndroid::reactnative)
+else()
+    target_link_libraries(${CMAKE_PROJECT_NAME}
+        ReactAndroid::react_nativemodule_core
+        ReactAndroid::turbomodulejsijni
+    )
+endif()

@@ -58,7 +58,7 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
     private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00)
     private val ESC_BEEP = byteArrayOf(0x1B, 0x42, 0x03, 0x02)
 
-    private val DEFAULT_PORT = 9100
+    private val DEFAULT_PORT = 9100.0
     private val DEFAULT_TIMEOUT = 4000
 
     // Listeners
@@ -74,7 +74,7 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
 
     // ============ Lifecycle ============
 
-    override fun init(): Promise<Unit> = Promise.async {
+    override fun initialize(): Promise<Unit> = Promise.async {
         // Network printer doesn't need special initialization
     }
 
@@ -103,7 +103,7 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
             val jobs = (1..254).map { i ->
                 async {
                     val host = "$subnet.$i"
-                    if (isPortOpen(host, DEFAULT_PORT, 100)) {
+                    if (isPortOpen(host, DEFAULT_PORT.toInt(), 100)) {
                         synchronized(foundDevices) {
                             foundDevices.add(NetDevice(host, DEFAULT_PORT, null))
                         }
@@ -152,12 +152,12 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
                 )
                 outputStream = socket?.getOutputStream()
 
-                val device = NetDevice(host, port.toInt(), "$host:${port.toInt()}")
+                val device = NetDevice(host, port, "$host:${port.toInt()}")
                 currentDevice = device
                 connectedDeviceId = "$host:${port.toInt()}"
 
                 // Add to known devices if not exists
-                if (knownDevices.none { it.host == host && it.port == port.toInt() }) {
+                if (knownDevices.none { it.host == host && it.port == port }) {
                     knownDevices.add(device)
                 }
 
@@ -433,6 +433,93 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
             }
         }
     }
+
+    // ============ Sync Print Methods ============
+
+    override fun printTextSync(text: String, options: PrintOptions): String {
+        val jobId = UUID.randomUUID().toString()
+        printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+        scope.launch {
+            try {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.PRINTING, null)
+                ensureConnected()
+                val data = encodeText(text, options)
+                writeToSocket(data)
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+            } catch (e: Exception) {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+            }
+        }
+        return jobId
+    }
+
+    override fun printBillSync(text: String, options: PrintOptions): String {
+        val billOptions = PrintOptions(
+            beep = true,
+            cut = true,
+            tailingLine = true,
+            encoding = options.encoding
+        )
+        return printTextSync(text, billOptions)
+    }
+
+    override fun printRawSync(data: String): String {
+        val jobId = UUID.randomUUID().toString()
+        printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+        scope.launch {
+            try {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.PRINTING, null)
+                ensureConnected()
+                val bytes = Base64.decode(data, Base64.DEFAULT)
+                writeToSocket(bytes)
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+            } catch (e: Exception) {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+            }
+        }
+        return jobId
+    }
+
+    override fun printImageBase64Sync(base64: String, options: ImagePrintOptions): String {
+        val jobId = UUID.randomUUID().toString()
+        printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+        scope.launch {
+            try {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.PRINTING, null)
+                ensureConnected()
+                val bitmap = imageProcessor.decodeBitmapFromBase64(base64)
+                    ?: throw IllegalArgumentException("Invalid Base64 image data")
+                val escPosData = imageProcessor.bitmapToEscPos(
+                    bitmap, options.imageWidth.toInt(), options.imageHeight.toInt()
+                )
+                writeToSocket(escPosData)
+                if (options.cut) writeToSocket(ESC_CUT)
+                if (options.beep) writeToSocket(ESC_BEEP)
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+            } catch (e: Exception) {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+            }
+        }
+        return jobId
+    }
+
+    override fun printColumnsTextSync(
+        texts: Array<String>,
+        columnWidths: DoubleArray,
+        columnAlignments: DoubleArray,
+        columnStyles: Array<String>,
+        options: PrintOptions
+    ): String {
+        val result = processColumnText(
+            texts.toList(),
+            columnWidths.map { it.toInt() },
+            columnAlignments.map { it.toInt() },
+            columnStyles.toList()
+        )
+        return printTextSync(result, options)
+    }
+
+    override fun getJobStatus(jobId: String): PrintJobStatus? = printJobs[jobId]
 
     // ============ Image Caching ============
 

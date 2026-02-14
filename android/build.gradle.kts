@@ -21,7 +21,8 @@ android {
         consumerProguardFiles("consumer-rules.pro")
 
         ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            val reactNativeArchitectures = (project.findProperty("reactNativeArchitectures") as? String)?.split(",")
+            abiFilters += reactNativeArchitectures ?: listOf("armeabi-v7a", "arm64-v8a")
         }
 
         externalNativeBuild {
@@ -83,7 +84,7 @@ dependencies {
     implementation("com.facebook.react:react-android")
 
     // Nitro Modules
-    implementation("com.margelo.nitro:react-native-nitro-modules:0.18.2")
+    implementation(project(":react-native-nitro-modules"))
 
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")

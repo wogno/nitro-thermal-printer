@@ -117,7 +117,7 @@ class HybridUSBPrinter : HybridUSBPrinterSpec() {
 
     // ============ Lifecycle ============
 
-    override fun init(): Promise<Unit> = Promise.async {
+    override fun initialize(): Promise<Unit> = Promise.async {
         withContext(Dispatchers.Main) {
             usbManager = context.getSystemService(Context.USB_SERVICE) as? UsbManager
                 ?: throw IllegalStateException("USB Manager not available")
@@ -430,6 +430,93 @@ class HybridUSBPrinter : HybridUSBPrinterSpec() {
         )
         return printText(result, options)
     }
+
+    // ============ Sync Print Methods ============
+
+    override fun printTextSync(text: String, options: PrintOptions): String {
+        val jobId = UUID.randomUUID().toString()
+        printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+        scope.launch {
+            try {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.PRINTING, null)
+                ensureConnected()
+                val data = encodeText(text, options)
+                writeToUsb(data)
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+            } catch (e: Exception) {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+            }
+        }
+        return jobId
+    }
+
+    override fun printBillSync(text: String, options: PrintOptions): String {
+        val billOptions = PrintOptions(
+            beep = true,
+            cut = true,
+            tailingLine = true,
+            encoding = options.encoding
+        )
+        return printTextSync(text, billOptions)
+    }
+
+    override fun printRawSync(data: String): String {
+        val jobId = UUID.randomUUID().toString()
+        printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+        scope.launch {
+            try {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.PRINTING, null)
+                ensureConnected()
+                val bytes = Base64.decode(data, Base64.DEFAULT)
+                writeToUsb(bytes)
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+            } catch (e: Exception) {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+            }
+        }
+        return jobId
+    }
+
+    override fun printImageBase64Sync(base64: String, options: ImagePrintOptions): String {
+        val jobId = UUID.randomUUID().toString()
+        printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.QUEUED, null)
+        scope.launch {
+            try {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.PRINTING, null)
+                ensureConnected()
+                val bitmap = imageProcessor.decodeBitmapFromBase64(base64)
+                    ?: throw IllegalArgumentException("Invalid Base64 image data")
+                val escPosData = imageProcessor.bitmapToEscPos(
+                    bitmap, options.imageWidth.toInt(), options.imageHeight.toInt()
+                )
+                writeToUsb(escPosData)
+                if (options.cut) writeToUsb(ESC_CUT)
+                if (options.beep) writeToUsb(ESC_BEEP)
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.COMPLETED, null)
+            } catch (e: Exception) {
+                printJobs[jobId] = PrintJobStatus(jobId, PrintJobStatusType.FAILED, e.message)
+            }
+        }
+        return jobId
+    }
+
+    override fun printColumnsTextSync(
+        texts: Array<String>,
+        columnWidths: DoubleArray,
+        columnAlignments: DoubleArray,
+        columnStyles: Array<String>,
+        options: PrintOptions
+    ): String {
+        val result = processColumnText(
+            texts.toList(),
+            columnWidths.map { it.toInt() },
+            columnAlignments.map { it.toInt() },
+            columnStyles.toList()
+        )
+        return printTextSync(result, options)
+    }
+
+    override fun getJobStatus(jobId: String): PrintJobStatus? = printJobs[jobId]
 
     // ============ Image Caching ============
 
