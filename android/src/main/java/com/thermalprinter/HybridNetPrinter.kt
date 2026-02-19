@@ -366,12 +366,31 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
                 ensureConnected()
 
                 // Process each item in the bulk
+                // NOTE: We avoid using encodeText() here because ESC/POS commands
+                // containing \x00 (like TXT_NORMAL = \x1b\x21\x00) get truncated
+                // by the JNI bridge (Modified UTF-8 treats \x00 as string terminator).
+                // Instead, we write ESC_INIT separately and append \x00 after text
+                // to safely complete any truncated ESC command.
                 for (item in items) {
                     when (item.type) {
                         PrintBulkItemType.TEXT -> {
                             item.content?.let { content ->
-                                val data = encodeText(content, item.options ?: PrintOptions(false, false, false, "UTF-8"))
-                                writeToSocket(data)
+                                // Send ESC @ (init) as raw bytes to reset printer state
+                                writeToSocket(ESC_INIT)
+                                // Send text content bytes
+                                val textBytes = content.toByteArray(charset(item.options?.encoding ?: "UTF-8"))
+                                writeToSocket(textBytes)
+                                // Append 0x00 to complete any truncated ESC command
+                                // (e.g. TXT_NORMAL \x1b\x21\x00 loses its \x00 in JNI)
+                                // then append newline
+                                writeToSocket(byteArrayOf(0x00, 0x0A))
+                                // Handle options
+                                val options = item.options
+                                if (options != null) {
+                                    if (options.tailingLine) writeToSocket("\n\n\n".toByteArray())
+                                    if (options.beep) writeToSocket(ESC_BEEP)
+                                    if (options.cut) writeToSocket(ESC_CUT)
+                                }
                             }
                         }
 
@@ -386,9 +405,19 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
                                             alignments.map { it.toInt() },
                                             styles.toList()
                                         )
-                                        val options = item.options ?: PrintOptions(false, false, false, "UTF-8")
-                                        val data = encodeText(result, options)
-                                        writeToSocket(data)
+                                        // Send ESC @ (init) as raw bytes
+                                        writeToSocket(ESC_INIT)
+                                        val encoding = item.options?.encoding ?: "UTF-8"
+                                        val textBytes = result.toByteArray(charset(encoding))
+                                        writeToSocket(textBytes)
+                                        // Append 0x00 + newline
+                                        writeToSocket(byteArrayOf(0x00, 0x0A))
+                                        // Handle options
+                                        val options = item.options
+                                        if (options != null) {
+                                            if (options.beep) writeToSocket(ESC_BEEP)
+                                            if (options.cut) writeToSocket(ESC_CUT)
+                                        }
                                     }
                                 }
                             }
@@ -670,6 +699,7 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
             for (i in texts.indices) {
                 val width = columnWidths.getOrElse(i) { 10 }
                 val alignment = columnAlignments.getOrElse(i) { 0 }
+                val style = columnStyles.getOrElse(i) { "" }
                 var text = remainingTexts.getOrElse(i) { "" }
 
                 if (text.length > width) {
@@ -687,7 +717,8 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
                     2 -> text.padStart(width)
                     else -> text.padEnd(width)
                 }
-                lineBuilder.append(paddedText)
+                // Apply style if provided (e.g. BOLD_ON + TXT_2HEIGHT for totals)
+                lineBuilder.append(style + paddedText)
             }
             lines.add(lineBuilder.toString())
         }

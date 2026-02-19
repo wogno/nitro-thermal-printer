@@ -8,6 +8,7 @@ import android.database.Cursor
 import android.net.Uri
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
+import com.margelo.nitro.com.thermalprinter.NitroThermalPrinterOnLoad
 
 /**
  * Provides application context to Nitro HybridObjects.
@@ -36,6 +37,8 @@ class ThermalPrinterInitProvider : ContentProvider() {
         context?.let { ctx ->
             ApplicationContextProvider.initialize(ctx)
         }
+        // Load the native library and register HybridObjects in the Nitro registry
+        NitroThermalPrinterOnLoad.initializeNative()
         return true
     }
 
