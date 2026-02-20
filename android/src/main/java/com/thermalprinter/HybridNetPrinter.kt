@@ -668,6 +668,9 @@ class HybridNetPrinter : HybridNetPrinterSpec() {
         val output = mutableListOf<Byte>()
         output.addAll(ESC_INIT.toList())
         output.addAll(text.toByteArray(charset(options.encoding)).toList())
+        // Append 0x00 to safely complete any ESC command truncated by JNI bridge
+        // (JNI Modified UTF-8 strips \x00 from strings, e.g. TXT_NORMAL \x1b\x21\x00)
+        output.add(0x00)
 
         if (options.tailingLine) {
             output.addAll("\n\n\n".toByteArray().toList())
