@@ -40,9 +40,12 @@ Pod::Spec.new do |s|
     'DEFINES_MODULE' => 'YES',
     'SWIFT_INCLUDE_PATHS' => '"$(PODS_TARGET_SRCROOT)/ios/PrinterSDK"',
     'OTHER_SWIFT_FLAGS' => '-no-verify-emitted-module-interface',
-    # Only link PrinterSDK on device builds
+    # Only link PrinterSDK on device builds (not simulator)
     'OTHER_LDFLAGS[sdk=iphoneos*]' => '-lPrinterSDK',
-    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/ios/PrinterSDK'
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/ios/PrinterSDK',
+    'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]' => '$(inherited)',
+    # Exclude the static library from simulator builds to prevent linker errors
+    'EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]' => 'libPrinterSDK.a'
   }
 
   # Vendored libraries - static library for device builds
