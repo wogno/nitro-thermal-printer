@@ -87,10 +87,15 @@ class HybridBLEPrinter : HybridBLEPrinterSpec() {
         withContext(Dispatchers.Main) {
             val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             bluetoothAdapter = bluetoothManager?.adapter
-                ?: throw IllegalStateException("No Bluetooth adapter available")
+
+            // Allow initialization on emulators without Bluetooth - operations will fail gracefully
+            if (bluetoothAdapter == null) {
+                android.util.Log.w("HybridBLEPrinter", "No Bluetooth adapter available (emulator?)")
+                return@withContext
+            }
 
             if (bluetoothAdapter?.isEnabled != true) {
-                throw IllegalStateException("Bluetooth is not enabled")
+                android.util.Log.w("HybridBLEPrinter", "Bluetooth is not enabled")
             }
         }
     }

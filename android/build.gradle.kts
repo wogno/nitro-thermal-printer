@@ -22,7 +22,7 @@ android {
 
         ndk {
             val reactNativeArchitectures = (project.findProperty("reactNativeArchitectures") as? String)?.split(",")
-            abiFilters += reactNativeArchitectures ?: listOf("armeabi-v7a", "arm64-v8a")
+            abiFilters += reactNativeArchitectures ?: listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
 
         externalNativeBuild {
