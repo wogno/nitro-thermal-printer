@@ -28,7 +28,10 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += listOf("-O2", "-frtti", "-fexceptions", "-Wall", "-fstack-protector-all")
-                arguments += listOf("-DANDROID_STL=c++_shared")
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                )
             }
         }
     }
