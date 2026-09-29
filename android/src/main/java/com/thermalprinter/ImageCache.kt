@@ -1,11 +1,9 @@
 package com.thermalprinter
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
+import com.thermalprinter.utils.RemoteBitmapLoader
 
 /**
  * LRU Image cache for thermal printer images.
@@ -105,26 +103,7 @@ class ImageCache(private val maxSize: Int = 10) {
     /**
      * Download a bitmap from URL
      */
-    private fun downloadBitmap(src: String): Bitmap? {
-        return try {
-            val url = URL(src)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.doInput = true
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            connection.connect()
-
-            val inputStream = connection.inputStream
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
-            connection.disconnect()
-
-            bitmap
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
+    private fun downloadBitmap(src: String): Bitmap? = RemoteBitmapLoader.load(src)
 
     /**
      * Download and decode a bitmap from URL (public version for direct use)

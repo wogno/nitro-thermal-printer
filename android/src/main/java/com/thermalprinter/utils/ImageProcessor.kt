@@ -5,8 +5,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * Image processor for thermal printer.
@@ -32,23 +30,7 @@ class ImageProcessor {
      */
     suspend fun downloadBitmap(url: String): Bitmap? {
         return withContext(Dispatchers.IO) {
-            try {
-                val connection = URL(url).openConnection() as HttpURLConnection
-                connection.doInput = true
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
-                connection.connect()
-
-                val inputStream = connection.inputStream
-                val bitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream.close()
-                connection.disconnect()
-
-                bitmap
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
+            RemoteBitmapLoader.load(url)
         }
     }
 

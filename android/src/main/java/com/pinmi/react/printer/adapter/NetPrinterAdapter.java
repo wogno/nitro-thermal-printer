@@ -4,6 +4,7 @@ import static com.pinmi.react.printer.adapter.UtilsImage.recollectSlice;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import com.thermalprinter.utils.RemoteBitmapLoader;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.util.Base64;
@@ -16,18 +17,13 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.graphics.BitmapFactory;
 import androidx.annotation.RequiresApi;
 
 /**
@@ -238,22 +234,7 @@ public class NetPrinterAdapter implements PrinterAdapter {
     }
 
     public static Bitmap getBitmapFromURL(String src) {
-        try {
-            URL url = new URL(src);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoInput(true);
-            connection.connect();
-            InputStream input = connection.getInputStream();
-            Bitmap myBitmap = BitmapFactory.decodeStream(input);
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            myBitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
-
-            return myBitmap;
-        } catch (IOException e) {
-            // Log exception
-            return null;
-        }
+        return RemoteBitmapLoader.load(src);
     }
 
 

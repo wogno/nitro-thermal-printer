@@ -98,6 +98,10 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
 
+    // Image download + downsampling for printed images (see RemoteBitmapLoader).
+    // Same version as expo-image's, so apps that ship it resolve a single copy.
+    implementation("com.github.bumptech.glide:glide:5.0.5")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
