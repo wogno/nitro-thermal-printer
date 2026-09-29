@@ -14,6 +14,15 @@ class PrinterType {
 }
 #endif
 
+// PrinterSDK.h has no nullability annotations, so Swift imports `name` and
+// `UUIDString` as never-nil. BLE peripherals without a name (watches, earbuds
+// near the phone) do report nil, and reading `name` directly crashed the app
+// in the middle of a scan (Sentry SONGYAMM-ERP-APP-9M). Always read them here.
+extension PrinterType {
+    var safeName: String { (name as String?) ?? "" }
+    var safeUUID: String { (uuidString as String?) ?? "" }
+}
+
 /// HybridBLEPrinter - Swift implementation of BLE thermal printer
 /// Implements Nitro-generated HybridBLEPrinterSpec protocol for JSI bridge
 public class HybridBLEPrinter: HybridBLEPrinterSpec {
@@ -109,8 +118,8 @@ public class HybridBLEPrinter: HybridBLEPrinterSpec {
 
                     self?.printerArray.append(printer)
                     let device = BLEDevice(
-                        deviceName: printer.name,
-                        innerMacAddress: printer.uuidString
+                        deviceName: printer.safeName,
+                        innerMacAddress: printer.safeUUID
                     )
 
                     if !devices.contains(where: { $0.innerMacAddress == device.innerMacAddress }) {
@@ -138,7 +147,7 @@ public class HybridBLEPrinter: HybridBLEPrinterSpec {
     // MARK: - Connection
 
     public func connectPrinter(innerMacAddress: String) throws -> Promise<BLEDevice> {
-        guard let printer = self.printerArray.first(where: { $0.uuidString == innerMacAddress }) else {
+        guard let printer = self.printerArray.first(where: { $0.safeUUID == innerMacAddress }) else {
             self.setConnectionState(.disconnected)
             throw PrinterError.deviceNotFound
         }
@@ -149,8 +158,8 @@ public class HybridBLEPrinter: HybridBLEPrinterSpec {
 
         // Create device immediately
         let device = BLEDevice(
-            deviceName: printer.name,
-            innerMacAddress: printer.uuidString
+            deviceName: printer.safeName,
+            innerMacAddress: printer.safeUUID
         )
 
         // Set connection state after a small delay for BLE to establish
